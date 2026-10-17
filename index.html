@@ -1,0 +1,1695 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Rues de Kaloum</title>
+<meta name="description" content="Plan d'adressage de Kaloum (Conakry) : noms de rues proposés, numéros, codes postaux, itinéraires et projet de tramway.">
+<meta name="theme-color" content="#1c3e74">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+/* Mise en page : carte plein écran + panneau latéral (en bas sur téléphone). Couleurs du drapeau guinéen, en sourdine. */
+:root{
+  --bg:#f3f5f1; --panel:#ffffff; --fg:#17231b; --muted:#5f6d64; --line:#dde3dc;
+  --green:#0f7a46; --green-soft:#e3f1e8; --yellow:#e8b100; --red:#c8312a;
+  --street:#0f7a46; --street-keep:#3e5a8a; --street-todo:#b9a07a; --circ:#d9650b; --on-red:#ffffff; --tram:#7b2d8e;
+  --plan-paper:#f4eedf; --plan-bati:#e4d8c2; --plan-bati-line:#cbbb9e; --plan-park:#cfe1ad; --plan-street:#ffffff; --plan-casing:#b5a892; --plan-major:#f7d36b; --plan-major-casing:#bf9332; --plan-text:#3b3128; --plan-halo:#fffdf6; --plan-quartier:#a3412f;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Instrument Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1512; --panel:#161e1a; --fg:#e7eee9; --muted:#9aa8a0; --line:#2a352f;
+  --green:#3fc483; --green-soft:#183326; --yellow:#f2c53d; --red:#f06a5f;
+  --street:#3fc483; --street-keep:#8fb0ea; --street-todo:#8a7a60; --circ:#ff9a45; --tram:#d08be6; --plan-paper:#191b18; --plan-bati:#2d2b26; --plan-bati-line:#3a372f; --plan-park:#24331f; --plan-street:#4b4840; --plan-casing:#141412; --plan-major:#8c6c25; --plan-major-casing:#1d1a12; --plan-text:#efe7d6; --plan-halo:#121310; --plan-quartier:#e79a83; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1512; --panel:#161e1a; --fg:#e7eee9; --muted:#9aa8a0; --line:#2a352f;
+  --green:#3fc483; --green-soft:#183326; --yellow:#f2c53d; --red:#f06a5f;
+  --street:#3fc483; --street-keep:#8fb0ea; --street-todo:#8a7a60; --circ:#ff9a45; --tram:#d08be6; --plan-paper:#191b18; --plan-bati:#2d2b26; --plan-bati-line:#3a372f; --plan-park:#24331f; --plan-street:#4b4840; --plan-casing:#141412; --plan-major:#8c6c25; --plan-major-casing:#1d1a12; --plan-text:#efe7d6; --plan-halo:#121310; --plan-quartier:#e79a83; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--body);display:flex;flex-direction:column;overflow:hidden}
+.flag{display:flex;height:4px;flex-shrink:0}.flag i{flex:1}.flag i:nth-child(1){background:var(--red)}.flag i:nth-child(2){background:var(--yellow)}.flag i:nth-child(3){background:var(--green)}
+header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));background:var(--panel);border-bottom:1px solid var(--line);flex-shrink:0}
+h1{font:800 22px/1.1 var(--display);margin:0;letter-spacing:-.01em}
+h1 small{display:block;font:500 12px var(--body);color:var(--muted);letter-spacing:.02em;margin-top:2px}
+.counts{display:flex;gap:16px;margin-left:auto;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.counts b{font:800 18px var(--display);color:var(--fg);font-variant-numeric:tabular-nums;margin-right:4px}
+.btn{font:600 13px var(--body);border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:10px;padding:8px 12px;cursor:pointer;min-height:38px}
+.btn:hover{border-color:var(--green)}.btn.primary{background:var(--green);border-color:var(--green);color:var(--panel)}
+.btn:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+main{flex:1;display:grid;grid-template-columns:1fr 380px;min-height:0}
+#map{min-height:0;background:var(--bg)}
+aside{background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.detail{padding:16px;border-bottom:1px solid var(--line)}
+.eyebrow{font:600 11px var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.detail h2{font:800 24px/1.15 var(--display);margin:4px 0 6px;text-wrap:balance}
+.bio{margin:0 0 10px;color:var(--fg)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.chip{font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--green-soft);color:var(--green)}
+.chip.old{background:transparent;border:1px dashed var(--line);color:var(--muted)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin:8px 0 12px}.kv span{color:var(--muted)}.kv b{font-weight:600;font-variant-numeric:tabular-nums}
+.addr{font-size:13px;background:var(--bg);border-radius:10px;padding:8px 10px;margin-bottom:12px}
+label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:8px 0 4px}
+select,input[type=text],input[type=search]{width:100%;font:500 14px var(--body);color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-height:40px}
+.row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.empty{color:var(--muted);font-size:14px}
+.listhead{padding:12px 16px 8px;display:grid;gap:8px}
+.toggle{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.toggle input{width:18px;height:18px;accent-color:var(--green)}
+ul{list-style:none;margin:0;padding:0 8px 16px;overflow:auto;flex:1;min-height:0}
+li button{display:grid;grid-template-columns:10px 1fr auto;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;color:var(--fg);padding:8px;border-radius:10px;cursor:pointer;font:inherit}
+li button:hover,li button.sel{background:var(--green-soft)}
+li .dot{width:10px;height:10px;border-radius:50%}
+li .n{font-weight:600;line-height:1.25;min-width:0}li .n small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+li .m{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);padding:0 16px 4px}
+.legend span{display:inline-flex;align-items:center;gap:6px}.legend i{width:16px;height:4px;border-radius:2px;display:inline-block}
+.status{position:absolute;inset:0;display:grid;place-items:center;z-index:900;background:color-mix(in srgb,var(--bg) 82%,transparent);text-align:center;padding:24px}
+.status div{max-width:420px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}
+.status h3{font:800 18px var(--display);margin:0 0 6px}
+.mapwrap{position:relative;min-height:0;display:flex}.mapwrap #map{flex:1}
+.leaflet-tooltip.lbl{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:6px;font:600 11px var(--body);padding:2px 6px;box-shadow:none;white-space:nowrap}
+.leaflet-tooltip.lbl:before{display:none}
+.leaflet-container{font-family:var(--body)}
+.addp{padding:0 16px 10px;font-size:13px}.addp summary{cursor:pointer;font-weight:600;color:var(--green);padding:4px 0}
+.leaflet-container.paper{background:var(--plan-paper)}
+.leaflet-container.paper .leaflet-tile-pane{mix-blend-mode:multiply;opacity:.8}
+text.stl{font-family:var(--body);font-weight:600;fill:var(--plan-text);paint-order:stroke;stroke:var(--plan-halo);stroke-width:3.2px;stroke-linejoin:round}
+text.stl.major{font-weight:700;letter-spacing:.06em}
+.qwrap{background:none!important;border:0!important}
+.hno{display:inline-block;transform:translate(-50%,-50%);font:700 10px var(--body);color:var(--plan-text);text-shadow:0 0 2px var(--plan-halo),0 0 2px var(--plan-halo),0 0 3px var(--plan-halo);font-variant-numeric:tabular-nums;white-space:nowrap}
+.hno.odd{color:var(--plan-quartier)}
+.leaflet-popup-content{font:14px/1.4 var(--body);margin:12px 14px}
+.adr b{font:800 16px/1.25 var(--display);display:block;margin-bottom:2px}
+.adr small{color:var(--muted);display:block;margin-top:6px}
+.find{display:flex;gap:6px;flex:1 1 360px;min-width:0;max-width:560px}
+.find input{flex:1;min-width:0;font:500 14px var(--body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-height:38px}
+.adr .row{gap:6px}.adr .btn{min-height:32px;padding:5px 9px;font-size:12px}
+.adr a.btn{text-decoration:none;display:inline-flex;align-items:center}
+.plaque{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:4px 0 12px}
+.plaque svg.sign{width:100%;max-width:236px;flex:1 1 200px;height:auto;filter:drop-shadow(0 2px 3px rgba(0,0,0,.25))}
+.plaque .qr{width:84px;height:84px;background:#ffffff;border-radius:6px;padding:4px;flex-shrink:0}
+.plaque .qr svg{width:100%;height:100%;display:block}
+.plaque small{display:block;font-size:11px;color:var(--muted);max-width:300px}
+.qtr{display:inline-block;transform:translate(-50%,-50%);font:800 13px var(--display);letter-spacing:.28em;text-transform:uppercase;color:var(--plan-quartier);white-space:nowrap;text-shadow:0 0 3px var(--plan-halo),0 0 3px var(--plan-halo),0 0 6px var(--plan-halo);opacity:.85}
+.rendu{background:var(--panel);color:var(--fg);border-radius:8px;padding:8px 10px;box-shadow:0 1px 5px rgba(0,0,0,.25);font:600 13px var(--body);display:grid;gap:4px}
+.rendu b{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.rendu label{display:flex;gap:6px;align-items:center;margin:0;color:var(--fg);font-size:13px;cursor:pointer}
+.route{padding:14px 16px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--street-keep) 7%,var(--panel))}
+.route h2{font:800 20px/1.15 var(--display);margin:2px 0 8px}
+.rpts{display:grid;grid-template-columns:18px 1fr;gap:4px 8px;align-items:center;font-size:14px;margin-bottom:8px}
+.rpts i{width:12px;height:12px;border-radius:50%;display:block;margin:auto}
+.rpts .from{background:var(--street)}.rpts .to{background:var(--red)}
+.rpts b{font-weight:600}.rpts a{color:var(--street-keep);font-size:12px;cursor:pointer;text-decoration:underline}
+.rsum{display:flex;gap:16px;align-items:baseline;flex-wrap:wrap;margin:6px 0}
+.rsum b{font:800 24px var(--display);font-variant-numeric:tabular-nums}
+.rsum span{color:var(--muted);font-size:13px}
+.rmode{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.rsteps{list-style:none;margin:8px 0 0;padding:0;max-height:220px;overflow:auto;border-top:1px solid var(--line)}
+.rsteps li{display:grid;grid-template-columns:26px 1fr auto;gap:8px;padding:7px 2px;border-bottom:1px solid var(--line);font-size:13px;align-items:start}
+.rsteps li.cur{background:var(--green-soft)}
+.rsteps .ic{font:800 16px/1 var(--body);text-align:center;color:var(--street-keep)}
+.rsteps .d{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.guide{position:absolute;z-index:850;top:10px;left:50%;transform:translateX(-50%);width:min(520px,calc(100% - 120px));display:flex;gap:12px;align-items:center;background:var(--street-keep);color:var(--plan-halo);border-radius:14px;padding:10px 12px;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.gturn{font:800 32px/1 var(--body);width:40px;text-align:center}
+.gtxt{flex:1;min-width:0}.gtxt b{display:block;font:800 18px/1.2 var(--display)}.gtxt span{font-size:13px;opacity:.9}
+.guide .btn{background:var(--plan-halo);color:var(--fg);border-color:transparent}
+.vehwrap{background:none!important;border:0!important}
+.veh{display:block;width:40px;height:40px;margin:-20px 0 0 -20px;transition:transform .15s linear;filter:drop-shadow(0 2px 3px rgba(0,0,0,.45))}
+.veh svg{width:100%;height:100%;display:block}
+.walker{display:grid;place-items:center;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:#e0218a;border:3px solid #ffffff;box-shadow:0 0 0 3px rgba(224,33,138,.35),0 2px 6px rgba(0,0,0,.4);font-size:18px;line-height:1}
+.pickhint{position:absolute;z-index:850;top:10px;left:50%;transform:translateX(-50%);background:var(--panel);border:2px solid var(--street);border-radius:12px;padding:8px 12px;font-weight:600;display:flex;gap:10px;align-items:center;box-shadow:0 4px 14px rgba(0,0,0,.2);max-width:calc(100% - 120px)}
+.tram-st{display:block;width:13px;height:13px;margin:-6.5px 0 0 -6.5px;border-radius:50%;background:#ffffff;border:3px solid #1d1d1d;box-sizing:border-box}
+.tram-st.big{width:18px;height:18px;margin:-9px 0 0 -9px;border-width:4px}
+.tram-badge{display:grid;place-items:center;width:30px;height:30px;margin:-46px 0 0 -15px;border-radius:50%;background:var(--tram);color:#ffffff;font:800 13px var(--body);border:3px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.leaflet-tooltip.tramlbl{background:#ffffff;color:#1d1d1d;border:0;border-radius:4px;font:700 11.5px var(--body);padding:1px 6px;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.leaflet-tooltip.tramlbl.big{font-size:13px;background:var(--tram);color:#ffffff}
+.leaflet-tooltip.tramlbl:before{display:none}
+.tram-z-lo .leaflet-tooltip.tramlbl:not(.big){display:none}
+.tram-z-kal .leaflet-tooltip.tramlbl.kal:not(.big){display:none}
+.chipmap{background:var(--panel);color:var(--muted);border-radius:8px;padding:5px 9px;font:500 12px var(--body);box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.tabs{display:flex;gap:4px;background:var(--bg);padding:4px;border-radius:10px}
+.tabs button{flex:1;border:0;background:transparent;color:var(--muted);font:600 13px var(--body);padding:7px;border-radius:8px;cursor:pointer;min-height:36px}
+.tabs button.on{background:var(--panel);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+li.letter{font:800 18px var(--display);color:var(--plan-quartier);padding:10px 8px 2px;border-bottom:1px solid var(--line);margin-bottom:2px}
+.idx{display:grid;grid-template-columns:1fr auto;gap:8px;width:100%;text-align:left;background:none;border:0;color:var(--fg);padding:5px 8px;border-radius:8px;cursor:pointer;font:inherit;font-size:14px}
+.idx:hover,.idx.sel{background:var(--green-soft)}
+.idx em{font-style:normal;color:var(--muted)}
+.idx .c{font-variant-numeric:tabular-nums;font-weight:600;font-size:12px;color:var(--muted);text-align:right}
+.gridlbl{display:inline-block;transform:translate(-50%,-50%);font:800 12px var(--display);color:var(--plan-quartier);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:0 5px;opacity:.9}
+.qcp{display:block;font:700 11px var(--body);letter-spacing:.12em;margin-top:2px;text-align:center}
+.fz{font:600 12px var(--body);padding:5px 10px;border-radius:999px;border:1px dashed var(--line);color:var(--muted)}
+.fz.on{border-style:solid;border-color:var(--green);color:var(--green);background:var(--green-soft)}
+.refbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.refbar span{font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-right:auto}
+.refbar .btn{min-height:32px;padding:5px 10px}
+.arw{display:inline-block;font:900 15px/1 var(--body);text-shadow:0 0 2px var(--plan-halo),0 0 3px var(--plan-halo)}
+.arw.osm{color:var(--street-keep)}.arw.prop{color:var(--circ)}
+.bs{display:grid;place-items:center;width:24px;height:24px;transform:translate(-50%,-50%);border-radius:50%;background:var(--red);color:var(--on-red);font:800 12px var(--body);border:2px solid var(--plan-halo);box-shadow:0 0 0 4px color-mix(in srgb,var(--red) 30%,transparent)}
+.circ{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.circ .row .btn{min-height:34px;padding:6px 10px}
+.btn.on{background:var(--green-soft);border-color:var(--green);color:var(--green)}
+.qlist{list-style:none;margin:6px 0;padding:0;display:grid;gap:4px}
+.qlist li{display:flex;align-items:center;gap:8px;font-size:13px}
+.qlist li b{font-variant-numeric:tabular-nums;color:var(--plan-quartier);min-width:44px}
+.qlist li span{flex:1;min-width:0}
+.qlist li button{border:0;background:none;color:var(--muted);cursor:pointer;font-size:12px;text-decoration:underline;padding:4px}
+.qdrag .qtr{cursor:grab;outline:2px dashed var(--plan-quartier);outline-offset:3px;border-radius:4px}
+.note{font-size:12px;color:var(--muted);padding:10px 16px;border-top:1px solid var(--line)}
+@media (max-width:820px){
+  main{grid-template-columns:1fr;grid-template-rows:55% 45%}
+  aside{border-left:0;border-top:1px solid var(--line)}
+  .counts{margin-left:0;width:100%}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="flag" aria-hidden="true"><i></i><i></i><i></i></div>
+<header>
+  <h1>Rues de Kaloum<small>Un code postal par quartier (88001, 88002…) · quadrillage A1, B2… · clique sur la carte pour obtenir une adresse</small></h1>
+  <div class="counts" aria-live="polite">
+    <span><b id="cNamed">–</b>rues nommées</span>
+    <span><b id="cKeep">–</b>noms conservés</span>
+    <span><b id="cTodo">–</b>à nommer</span>
+  </div>
+  <form class="find" id="findForm" role="search"><input type="search" id="findIn" placeholder="Où allez-vous ? Ex. : 27 Rue Camara Laye" aria-label="Chercher une adresse"><button class="btn primary" type="submit">Chercher</button><button class="btn" type="button" id="whereBtn" title="Utilise le GPS de ton téléphone">Où suis-je ?</button></form>
+  <span class="fz" id="frozenChip">Plan non figé</span>
+  <button class="btn" id="freezeBtn" type="button">Figer le plan</button>
+  <button class="btn primary" id="exportBtn" type="button">Exporter (GeoJSON)</button>
+  <button class="btn" id="exportCsvBtn" type="button">Adresses simulées (CSV)</button>
+  <button class="btn" id="refreshOsmBtn" type="button" title="Récupère les rues, bâtiments et quartiers à jour sur OpenStreetMap, avec copie de secours">Actualiser les rues</button>
+</header>
+<main>
+  <div class="mapwrap">
+    <div id="map" aria-label="Carte de Kaloum"></div>
+    <div class="guide" id="guide" hidden><div class="gturn" id="gTurn">↑</div><div class="gtxt"><b id="gMain"></b><span id="gSub"></span></div><button class="btn" type="button" id="gStop">Arrêter</button></div>
+    <div class="pickhint" id="pickHint" hidden><span id="pickTxt">Clique sur la carte pour choisir le point de départ</span> <button class="btn" type="button" id="pickCancel">Annuler</button></div>
+    <div class="status" id="status"><div><h3>Chargement des rues de Kaloum…</h3><p class="empty">Les rues réelles sont récupérées depuis OpenStreetMap. Cela prend 5 à 30 secondes.</p></div></div>
+  </div>
+  <aside>
+    <section class="route" id="route" hidden aria-live="polite"></section>
+    <section class="detail" id="detail"><p class="empty">Clique sur une rue de la carte ou de la liste pour voir son nom, la personnalité qu'il honore, et le changer.</p></section>
+    <div class="listhead">
+      <div class="tabs" role="tablist"><button type="button" id="tabList" class="on" role="tab">Liste des rues</button><button type="button" id="tabIdx" role="tab">Index A–Z</button></div>
+      <input type="search" id="q" placeholder="Chercher une rue, une personnalité ou un carreau (C4)" aria-label="Chercher">
+      <label class="toggle"><input type="checkbox" id="renameAll"> Renommer aussi les rues qui ont déjà un vrai nom</label>
+    </div>
+    <details class="addp" id="qPanel"><summary>Quartiers et codes postaux</summary>
+      <ul class="qlist" id="qList"></ul>
+      <label for="qName">Ajouter un quartier</label>
+      <div class="row" style="margin-top:0"><input type="text" id="qName" list="qSugg" placeholder="Nom du quartier" style="flex:1;min-width:0"><button class="btn" type="button" id="qAdd">Placer sur la carte</button></div>
+      <datalist id="qSugg"><option value="Almamya"><option value="Boulbinet"><option value="Coronthie"><option value="Fotoba"><option value="Kassa"><option value="Kouléwondy"><option value="Manquepas"><option value="Room"><option value="Sandervalia"><option value="Sans-Fil"><option value="Témenetaye"><option value="Tombo"></datalist>
+      <label class="toggle" style="margin-top:8px"><input type="checkbox" id="qEdit"> Déplacer les quartiers sur la carte (glisser leur nom)</label>
+      <p class="empty" style="font-size:12px;margin:6px 0 0">Les limites sont tracées à mi-chemin entre les centres de deux quartiers voisins. Déplace un centre pour ajuster une limite. Les suggestions de noms sont à vérifier avec la mairie.</p>
+    </details>
+    <details class="addp"><summary>Ajouter une personnalité à la liste</summary>
+      <label for="npName">Nom</label><input type="text" id="npName" placeholder="Ex. : Aïssatou Sow">
+      <label for="npDates">Dates (facultatif)</label><input type="text" id="npDates" placeholder="Ex. : 1920 – 1990">
+      <label for="npBio">Pourquoi elle ou il mérite une rue</label><input type="text" id="npBio" placeholder="Une phrase courte">
+      <div class="row"><button class="btn primary" type="button" id="npAdd">Ajouter</button><span class="empty" id="npMsg" role="status"></span></div>
+    </details>
+    <div class="legend"><span style="width:100%">Couleurs du rendu « Suivi des noms » :</span><span><i style="background:var(--street)"></i>Nom proposé</span><span><i style="background:var(--street-keep)"></i>Nom conservé</span><span><i style="background:var(--street-todo)"></i>À nommer</span></div>
+    <ul id="list"></ul>
+    <div class="refbar"><span>Référentiel</span><button class="btn" type="button" id="refOut">Enregistrer</button><label class="btn" for="refIn">Ouvrir…</label><input type="file" id="refIn" accept=".json,application/json" hidden></div>
+    <p class="note">Ces noms sont une proposition. Le nom officiel d'une rue est décidé par la commune. Rues © contributeurs OpenStreetMap. Fonds de carte © Esri, Maxar.</p>
+  </aside>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+(()=>{
+if(!window.L){const s=document.getElementById('status');s.innerHTML='<div><h3>La carte ne peut pas démarrer</h3><p class="empty">La bibliothèque de carte n\'a pas pu se charger. Vérifie que ton PC est connecté à internet, puis recharge la page (touche F5).</p></div>';return}
+/* ---------- Personnalités guinéennes (ordre = priorité pour les grandes voies) ---------- */
+const P=[
+ {id:'samory',name:'Samory Touré',dates:'v. 1830 – 1900',cat:'Résistance',bio:"Fondateur de l'empire du Wassoulou, il a résisté près de vingt ans à la conquête coloniale française."},
+ {id:'alfayaya',name:'Alfa Yaya Diallo',dates:'v. 1850 – 1912',cat:'Résistance',bio:"Roi du Labé, déporté par l'administration coloniale. Mort en exil, il reste un symbole de la résistance."},
+ {id:'mbalia',name:"M'Balia Camara",dates:'v. 1929 – 1955',cat:'Indépendance',bio:"Militante du RDA tuée à Tondon en 1955. Héroïne de la lutte des femmes pour l'indépendance."},
+ {id:'bokarbiro',name:'Bokar Biro Barry',dates:'† 1896',cat:'Résistance',bio:"Almamy du Fouta-Djalon, tombé à la bataille de Porédaka face aux troupes coloniales."},
+ {id:'camaralaye',name:'Camara Laye',dates:'1928 – 1980',cat:'Lettres',bio:"Écrivain, auteur de « L'Enfant noir » (1953), l'un des romans africains les plus lus au monde."},
+ {id:'jeannemartin',name:'Jeanne Martin Cissé',dates:'1926 – 2017',cat:'Indépendance',bio:"Diplomate, première femme à présider le Conseil de sécurité des Nations unies (1972)."},
+ {id:'dinahsalifou',name:'Dinah Salifou',dates:'v. 1858 – 1897',cat:'Résistance',bio:"Roi des Nalous, sur la côte guinéenne. Mort en exil à Saint-Louis du Sénégal."},
+ {id:'diallotelli',name:'Diallo Telli',dates:'1925 – 1977',cat:'Diplomatie',bio:"Boubacar Diallo Telli, premier secrétaire général de l'Organisation de l'unité africaine (OUA)."},
+ {id:'mafory',name:'Hadja Mafory Bangoura',dates:'1910 – 1976',cat:'Indépendance',bio:"Grande mobilisatrice des femmes pendant la lutte pour l'indépendance, puis ministre des Affaires sociales."},
+ {id:'kandia',name:'Sory Kandia Kouyaté',dates:'1933 – 1977',cat:'Musique',bio:"Immense voix de la musique mandingue, ambassadeur de la culture guinéenne dans le monde."},
+ {id:'karamokoalfa',name:'Karamoko Alfa',dates:'XVIIIe siècle',cat:'Histoire',bio:"Fondateur de l'État théocratique du Fouta-Djalon, au début du XVIIIe siècle."},
+ {id:'niane',name:'Djibril Tamsir Niane',dates:'1932 – 2021',cat:'Lettres',bio:"Historien, il a transcrit et fait connaître l'épopée de Soundjata Keïta."},
+ {id:'fodeba',name:'Keïta Fodéba',dates:'1921 – 1969',cat:'Culture',bio:"Fondateur des Ballets africains, qui ont fait connaître la danse guinéenne sur toutes les scènes du monde."},
+ {id:'yacine',name:'Yacine Diallo',dates:'1897 – 1954',cat:'Indépendance',bio:"Instituteur, premier député de Guinée élu à l'Assemblée nationale française (1946)."},
+ {id:'morykante',name:'Mory Kanté',dates:'1950 – 2020',cat:'Musique',bio:"Chanteur et joueur de kora, son titre « Yéké Yéké » a fait le tour du monde."},
+ {id:'saifoulaye',name:'Saïfoulaye Diallo',dates:'1923 – 1981',cat:'Indépendance',bio:"Figure de la marche vers l'indépendance, président de l'Assemblée nationale."},
+ {id:'mombeya',name:'Tierno Samba Mombéya',dates:'XVIIIe – XIXe siècle',cat:'Lettres',bio:"Lettré peul du Fouta-Djalon, auteur de l'« Oogirde Malal », poème en pular."},
+ {id:'demba',name:'Demba Camara',dates:'1944 – 1973',cat:'Musique',bio:"Chanteur vedette du Bembeya Jazz National, orchestre légendaire de Beyla."},
+ {id:'fantamady',name:'Cheick Fanta Mady Chérif',dates:'† 1955',cat:'Spiritualité',bio:"Grand guide religieux de Kankan, respecté dans toute l'Afrique de l'Ouest."},
+ {id:'wandel',name:'Momo Wandel Soumah',dates:'1926 – 2003',cat:'Musique',bio:"Saxophoniste et chanteur, considéré comme le père du jazz guinéen."},
+ {id:'sassine',name:'Williams Sassine',dates:'1944 – 1997',cat:'Lettres',bio:"Romancier, auteur de « Wirriyamu » et du « Zéhéros n'est pas n'importe qui »."},
+ {id:'keletigui',name:'Kélétigui Traoré',dates:'1934 – 2008',cat:'Musique',bio:"Saxophoniste et chef d'orchestre, fondateur de Kélétigui et ses Tambourinis."},
+ {id:'mamadykeita',name:'Mamady Keïta',dates:'1950 – 2021',cat:'Musique',bio:"Maître du djembé, il a enseigné les rythmes guinéens à des milliers d'élèves dans le monde."},
+ {id:'siradiou',name:'Siradiou Diallo',dates:'1936 – 2004',cat:'Presse',bio:"Journaliste à Jeune Afrique, écrivain puis homme politique."},
+ {id:'soundiata',name:'Soundiata Keïta',dates:'XIIIe siècle',cat:'Histoire',bio:"Fondateur de l'empire du Mali, dont la capitale Niani se trouvait dans l'actuelle Haute-Guinée."},
+ {id:'sorymawdo',name:'Almamy Ibrahima Sory Mawdo',dates:'XVIIIe siècle',cat:'Histoire',bio:"Almamy du Fouta-Djalon, chef militaire qui a consolidé l'État fondé par Karamoko Alfa."},
+ {id:'waligoumba',name:'Tierno Aliou, Wali de Goumba',dates:'† 1912',cat:'Résistance',bio:"Chef religieux respecté du Fouta-Djalon, arrêté par l'administration coloniale et mort en captivité."},
+ {id:'omartall',name:'El Hadj Omar Tall',dates:'v. 1797 – 1864',cat:'Histoire',bio:"Chef religieux et militaire. Installé à Dinguiraye, en Guinée, il en part pour fonder un vaste empire."},
+ {"id": "cabral", "name": "Amílcar Cabral", "dates": "1924 – 1973", "cat": "Indépendance", "pays": "Guinée-Bissau / Cap-Vert", "bio": "Chef de la lutte de libération de la Guinée-Bissau et du Cap-Vert, qui avait sa base à Conakry. Assassiné à Conakry en 1973."},
+ {"id": "makeba", "name": "Miriam Makeba", "dates": "1932 – 2008", "cat": "Musique", "pays": "Afrique du Sud", "bio": "« Mama Africa ». Chanteuse et militante contre l'apartheid, elle a vécu de longues années en Guinée."},
+ {"id": "nkrumah", "name": "Kwame Nkrumah", "dates": "1909 – 1972", "cat": "Panafricanisme", "pays": "Ghana", "bio": "Père de l'indépendance du Ghana et grand panafricaniste. Accueilli en Guinée après 1966, il y a vécu ses dernières années."},
+ {"id": "lumumba", "name": "Patrice Lumumba", "dates": "1925 – 1961", "cat": "Indépendance", "pays": "RD Congo", "bio": "Premier chef de gouvernement du Congo indépendant, symbole de la dignité africaine."},
+ {"id": "mandela", "name": "Nelson Mandela", "dates": "1918 – 2013", "cat": "Libération", "pays": "Afrique du Sud", "bio": "Vingt-sept ans de prison contre l'apartheid, puis premier président de l'Afrique du Sud démocratique. Prix Nobel de la paix 1993."},
+ {"id": "sankara", "name": "Thomas Sankara", "dates": "1949 – 1987", "cat": "Panafricanisme", "pays": "Burkina Faso", "bio": "Président du Burkina Faso, il a misé sur l'intégrité, l'autosuffisance et l'émancipation des femmes."},
+ {"id": "cheikhanta", "name": "Cheikh Anta Diop", "dates": "1923 – 1986", "cat": "Science", "pays": "Sénégal", "bio": "Historien, anthropologue et physicien. Il a démontré la place de l'Afrique dans l'histoire de l'humanité."},
+ {"id": "hampate", "name": "Amadou Hampâté Bâ", "dates": "1901 – 1991", "cat": "Lettres", "pays": "Mali", "bio": "Écrivain et sage peul : « En Afrique, un vieillard qui meurt est une bibliothèque qui brûle »."},
+ {"id": "mansamoussa", "name": "Mansa Moussa", "dates": "XIVe siècle", "cat": "Histoire", "pays": "Empire du Mali", "bio": "Souverain de l'empire du Mali, célèbre pour sa richesse, son pèlerinage à La Mecque et le rayonnement de Tombouctou."},
+ {"id": "nzinga", "name": "Reine Njinga", "dates": "v. 1583 – 1663", "cat": "Résistance", "pays": "Angola", "bio": "Reine du Ndongo et du Matamba, elle a résisté des décennies à la colonisation portugaise."},
+ {"id": "asantewaa", "name": "Yaa Asantewaa", "dates": "v. 1840 – 1921", "cat": "Résistance", "pays": "Ghana", "bio": "Reine mère ashanti qui a conduit la résistance contre les Britanniques en 1900."},
+ {"id": "alinesitoe", "name": "Aline Sitoé Diatta", "dates": "v. 1920 – 1944", "cat": "Résistance", "pays": "Sénégal", "bio": "Héroïne de la Casamance, elle a appelé à résister aux réquisitions coloniales. Morte en déportation."},
+ {"id": "nsoumer", "name": "Lalla Fatma N'Soumer", "dates": "v. 1830 – 1863", "cat": "Résistance", "pays": "Algérie", "bio": "Figure de la résistance kabyle à la conquête française."},
+ {"id": "abdelkader", "name": "Émir Abdelkader", "dates": "1808 – 1883", "cat": "Résistance", "pays": "Algérie", "bio": "Chef de la résistance algérienne, savant et humaniste respecté dans le monde entier."},
+ {"id": "ahmedbaba", "name": "Ahmed Baba", "dates": "1556 – 1627", "cat": "Science", "pays": "Mali", "bio": "Grand savant de Tombouctou, auteur de dizaines d'ouvrages de droit et de théologie."},
+ {"id": "nyerere", "name": "Julius Nyerere", "dates": "1922 – 1999", "cat": "Indépendance", "pays": "Tanzanie", "bio": "« Mwalimu », l'enseignant. Père de l'indépendance de la Tanzanie, défenseur de l'unité africaine."},
+ {"id": "modibo", "name": "Modibo Keïta", "dates": "1915 – 1977", "cat": "Indépendance", "pays": "Mali", "bio": "Premier président du Mali indépendant, proche allié de la Guinée."},
+ {"id": "senghor", "name": "Léopold Sédar Senghor", "dates": "1906 – 2001", "cat": "Lettres", "pays": "Sénégal", "bio": "Poète de la Négritude et premier président du Sénégal, premier Africain à l'Académie française."},
+ {"id": "umnyobe", "name": "Ruben Um Nyobè", "dates": "1913 – 1958", "cat": "Indépendance", "pays": "Cameroun", "bio": "Leader de la lutte pour l'indépendance du Cameroun, tué en 1958."},
+ {"id": "boganda", "name": "Barthélemy Boganda", "dates": "1910 – 1959", "cat": "Indépendance", "pays": "Centrafrique", "bio": "Père fondateur de la Centrafrique et défenseur d'une grande union de l'Afrique centrale."},
+ {"id": "olympio", "name": "Sylvanus Olympio", "dates": "1902 – 1963", "cat": "Indépendance", "pays": "Togo", "bio": "Premier président du Togo indépendant."},
+ {"id": "biko", "name": "Steve Biko", "dates": "1946 – 1977", "cat": "Libération", "pays": "Afrique du Sud", "bio": "Fondateur du mouvement de la Conscience noire, mort en détention."},
+ {"id": "tutu", "name": "Desmond Tutu", "dates": "1931 – 2021", "cat": "Libération", "pays": "Afrique du Sud", "bio": "Archevêque, voix de la non-violence contre l'apartheid. Prix Nobel de la paix 1984."},
+ {"id": "maathai", "name": "Wangari Maathai", "dates": "1940 – 2011", "cat": "Environnement", "pays": "Kenya", "bio": "Fondatrice du Mouvement de la ceinture verte, des dizaines de millions d'arbres plantés. Prix Nobel de la paix 2004."},
+ {"id": "annan", "name": "Kofi Annan", "dates": "1938 – 2018", "cat": "Diplomatie", "pays": "Ghana", "bio": "Secrétaire général des Nations unies, prix Nobel de la paix 2001."},
+ {"id": "funmilayo", "name": "Funmilayo Ransome-Kuti", "dates": "1900 – 1978", "cat": "Droits des femmes", "pays": "Nigeria", "bio": "Pionnière du combat pour les droits des femmes et pour l'indépendance du Nigeria."},
+ {"id": "mariamaba", "name": "Mariama Bâ", "dates": "1929 – 1981", "cat": "Lettres", "pays": "Sénégal", "bio": "Romancière, autrice de « Une si longue lettre », classique de la littérature africaine."},
+ {"id": "achebe", "name": "Chinua Achebe", "dates": "1930 – 2013", "cat": "Lettres", "pays": "Nigeria", "bio": "Auteur du « Monde s'effondre », roman africain parmi les plus lus au monde."},
+ {"id": "ngugi", "name": "Ngũgĩ wa Thiong'o", "dates": "1938 – 2025", "cat": "Lettres", "pays": "Kenya", "bio": "Romancier qui a choisi d'écrire dans sa langue, le kikuyu, pour défendre les langues africaines."},
+ {"id": "sembene", "name": "Ousmane Sembène", "dates": "1923 – 2007", "cat": "Cinéma", "pays": "Sénégal", "bio": "Écrivain et cinéaste, considéré comme le père du cinéma africain."},
+ {"id": "saro", "name": "Ken Saro-Wiwa", "dates": "1941 – 1995", "cat": "Environnement", "pays": "Nigeria", "bio": "Écrivain qui a défendu le peuple ogoni et son environnement face aux compagnies pétrolières."},
+ {"id": "fela", "name": "Fela Kuti", "dates": "1938 – 1997", "cat": "Musique", "pays": "Nigeria", "bio": "Inventeur de l'afrobeat, musicien engagé contre l'injustice."},
+ {"id": "farka", "name": "Ali Farka Touré", "dates": "1939 – 2006", "cat": "Musique", "pays": "Mali", "bio": "Guitariste du fleuve Niger, maître du blues du désert."},
+ {"id": "manu", "name": "Manu Dibango", "dates": "1933 – 2020", "cat": "Musique", "pays": "Cameroun", "bio": "Saxophoniste, son « Soul Makossa » a fait danser le monde entier."},
+ {"id": "cesaria", "name": "Cesária Évora", "dates": "1941 – 2011", "cat": "Musique", "pays": "Cap-Vert", "bio": "« La diva aux pieds nus », voix de la morna capverdienne."},
+ {"id": "papabouba", "name": "Papa Bouba Diop", "dates": "1978 – 2020", "cat": "Sport", "pays": "Sénégal", "bio": "Footballeur, auteur du but historique Sénégal–France à la Coupe du monde 2002."},
+ {"id": "monenembo", "name": "Tierno Monénembo", "dates": "né en 1947", "cat": "Lettres", "pays": "Guinée", "bio": "Écrivain guinéen, prix Renaudot 2008 pour « Le Roi de Kahel »."},
+ {"id": "soyinka", "name": "Wole Soyinka", "dates": "né en 1934", "cat": "Lettres", "pays": "Nigeria", "bio": "Dramaturge et poète, premier Africain prix Nobel de littérature (1986)."},
+ {"id": "gurnah", "name": "Abdulrazak Gurnah", "dates": "né en 1948", "cat": "Lettres", "pays": "Tanzanie", "bio": "Romancier né à Zanzibar, prix Nobel de littérature 2021."},
+ {"id": "adichie", "name": "Chimamanda Ngozi Adichie", "dates": "née en 1977", "cat": "Lettres", "pays": "Nigeria", "bio": "Romancière et essayiste, autrice d'« Americanah » et de « Nous sommes tous des féministes »."},
+ {"id": "sirleaf", "name": "Ellen Johnson Sirleaf", "dates": "née en 1938", "cat": "Démocratie", "pays": "Liberia", "bio": "Première femme élue cheffe d'État en Afrique, prix Nobel de la paix 2011."},
+ {"id": "mukwege", "name": "Denis Mukwege", "dates": "né en 1955", "cat": "Médecine", "pays": "RD Congo", "bio": "Gynécologue qui soigne les femmes victimes de violences, prix Nobel de la paix 2018."},
+ {"id": "kidjo", "name": "Angélique Kidjo", "dates": "née en 1960", "cat": "Musique", "pays": "Bénin", "bio": "Chanteuse aux nombreux Grammy Awards, ambassadrice des musiques africaines."},
+ {"id": "youssou", "name": "Youssou N'Dour", "dates": "né en 1959", "cat": "Musique", "pays": "Sénégal", "bio": "Roi du mbalax, l'une des voix africaines les plus connues au monde."},
+ {"id": "salifkeita", "name": "Salif Keïta", "dates": "né en 1949", "cat": "Musique", "pays": "Mali", "bio": "« La voix d'or de l'Afrique », chanteur et défenseur des personnes albinos."},
+ {"id": "drogba", "name": "Didier Drogba", "dates": "né en 1978", "cat": "Sport", "pays": "Côte d'Ivoire", "bio": "Footballeur légendaire, il a aussi œuvré pour la paix dans son pays."},
+ {"id": "etoo", "name": "Samuel Eto'o", "dates": "né en 1981", "cat": "Sport", "pays": "Cameroun", "bio": "Quatre fois Ballon d'or africain, l'un des plus grands attaquants africains."},
+ {"id": "mane", "name": "Sadio Mané", "dates": "né en 1992", "cat": "Sport", "pays": "Sénégal", "bio": "Footballeur, champion d'Afrique 2021, connu pour ses dons à son village natal."},
+ {"id": "toussaint", "name": "Toussaint Louverture", "dates": "1743 – 1803", "cat": "Histoire", "pays": "Haïti", "bio": "Ancien esclave devenu chef de la révolution haïtienne, première république noire libre."},
+ {"id": "mlk", "name": "Martin Luther King", "dates": "1929 – 1968", "cat": "Droits civiques", "pays": "États-Unis", "bio": "Pasteur et leader non violent du mouvement des droits civiques. « I have a dream ». Prix Nobel de la paix 1964."},
+ {"id": "malcolmx", "name": "Malcolm X", "dates": "1925 – 1965", "cat": "Droits civiques", "pays": "États-Unis", "bio": "Militant pour la dignité et les droits des Afro-Américains, admirateur des indépendances africaines."},
+ {"id": "rosaparks", "name": "Rosa Parks", "dates": "1913 – 2005", "cat": "Droits civiques", "pays": "États-Unis", "bio": "En refusant de céder sa place dans un bus en 1955, elle a lancé le grand boycott de Montgomery."},
+ {"id": "tubman", "name": "Harriet Tubman", "dates": "v. 1822 – 1913", "cat": "Droits civiques", "pays": "États-Unis", "bio": "Échappée de l'esclavage, elle a guidé des dizaines d'esclaves vers la liberté."},
+ {"id": "douglass", "name": "Frederick Douglass", "dates": "1818 – 1895", "cat": "Droits civiques", "pays": "États-Unis", "bio": "Ancien esclave devenu orateur et écrivain, grande voix de l'abolition."},
+ {"id": "garvey", "name": "Marcus Garvey", "dates": "1887 – 1940", "cat": "Panafricanisme", "pays": "Jamaïque", "bio": "Pionnier du panafricanisme, il a appelé les Noirs du monde entier à la fierté et à l'unité."},
+ {"id": "dubois", "name": "W. E. B. Du Bois", "dates": "1868 – 1963", "cat": "Panafricanisme", "pays": "États-Unis / Ghana", "bio": "Sociologue et père des congrès panafricains. Mort au Ghana, à Accra."},
+ {"id": "cesaire", "name": "Aimé Césaire", "dates": "1913 – 2008", "cat": "Lettres", "pays": "Martinique", "bio": "Poète de la Négritude, auteur du « Cahier d'un retour au pays natal »."},
+ {"id": "fanon", "name": "Frantz Fanon", "dates": "1925 – 1961", "cat": "Pensée", "pays": "Martinique / Algérie", "bio": "Psychiatre et penseur de la décolonisation, engagé dans la libération de l'Algérie."},
+ {"id": "gandhi", "name": "Mahatma Gandhi", "dates": "1869 – 1948", "cat": "Non-violence", "pays": "Inde", "bio": "Il a conduit l'Inde à l'indépendance par la non-violence. Son combat a commencé en Afrique du Sud."},
+ {"id": "bolivar", "name": "Simón Bolívar", "dates": "1783 – 1830", "cat": "Indépendance", "pays": "Amérique du Sud", "bio": "« El Libertador », il a mené plusieurs pays d'Amérique du Sud à l'indépendance."},
+ {"id": "ibnbattuta", "name": "Ibn Battuta", "dates": "1304 – v. 1369", "cat": "Voyage", "pays": "Maroc", "bio": "Grand voyageur, il a décrit l'empire du Mali qu'il a visité au XIVe siècle."},
+ {"id": "ibnkhaldoun", "name": "Ibn Khaldoun", "dates": "1332 – 1406", "cat": "Pensée", "pays": "Tunisie", "bio": "Historien et penseur, considéré comme un père de la sociologie."},
+ {"id": "avicenne", "name": "Avicenne", "dates": "980 – 1037", "cat": "Science", "pays": "Perse", "bio": "Ibn Sina, médecin et philosophe. Son « Canon de la médecine » a été enseigné pendant des siècles."},
+ {"id": "khwarizmi", "name": "Al-Khwârizmî", "dates": "v. 780 – v. 850", "cat": "Science", "pays": "Bagdad", "bio": "Mathématicien, père de l'algèbre. Le mot « algorithme » vient de son nom."},
+ {"id": "galilee", "name": "Galilée", "dates": "1564 – 1642", "cat": "Science", "pays": "Italie", "bio": "Astronome et physicien, il a observé le ciel avec la lunette et défendu que la Terre tourne autour du Soleil."},
+ {"id": "newton", "name": "Isaac Newton", "dates": "1643 – 1727", "cat": "Science", "pays": "Angleterre", "bio": "Physicien et mathématicien, il a découvert les lois du mouvement et de la gravitation."},
+ {"id": "einstein", "name": "Albert Einstein", "dates": "1879 – 1955", "cat": "Science", "pays": "Allemagne / États-Unis", "bio": "Physicien, auteur de la théorie de la relativité. Prix Nobel de physique 1921."},
+ {"id": "curie", "name": "Marie Curie", "dates": "1867 – 1934", "cat": "Science", "pays": "Pologne / France", "bio": "Pionnière de la radioactivité, seule personne prix Nobel dans deux sciences différentes."},
+ {"id": "pasteur", "name": "Louis Pasteur", "dates": "1822 – 1895", "cat": "Science", "pays": "France", "bio": "Il a mis au point le vaccin contre la rage et la pasteurisation."},
+ {"id": "hugo", "name": "Victor Hugo", "dates": "1802 – 1885", "cat": "Lettres", "pays": "France", "bio": "Écrivain des « Misérables », défenseur des pauvres et opposant à la peine de mort."},
+ {"id": "moliere", "name": "Molière", "dates": "1622 – 1673", "cat": "Théâtre", "pays": "France", "bio": "Auteur et comédien, maître de la comédie française."},
+ {"id": "shakespeare", "name": "William Shakespeare", "dates": "1564 – 1616", "cat": "Théâtre", "pays": "Angleterre", "bio": "Dramaturge et poète, auteur de « Roméo et Juliette » et « Hamlet »."},
+ {"id": "tolstoi", "name": "Léon Tolstoï", "dates": "1828 – 1910", "cat": "Lettres", "pays": "Russie", "bio": "Romancier de « Guerre et Paix », défenseur de la non-violence."},
+ {"id": "neruda", "name": "Pablo Neruda", "dates": "1904 – 1973", "cat": "Lettres", "pays": "Chili", "bio": "Poète, prix Nobel de littérature 1971."},
+ {"id": "garciamarquez", "name": "Gabriel García Márquez", "dates": "1927 – 2014", "cat": "Lettres", "pays": "Colombie", "bio": "Romancier de « Cent ans de solitude », prix Nobel de littérature 1982."},
+ {"id": "angelou", "name": "Maya Angelou", "dates": "1928 – 2014", "cat": "Lettres", "pays": "États-Unis", "bio": "Poétesse et écrivaine. Elle a vécu au Ghana et en Égypte dans les années 1960."},
+ {"id": "morrison", "name": "Toni Morrison", "dates": "1931 – 2019", "cat": "Lettres", "pays": "États-Unis", "bio": "Romancière de « Beloved », prix Nobel de littérature 1993."},
+ {"id": "baldwin", "name": "James Baldwin", "dates": "1924 – 1987", "cat": "Lettres", "pays": "États-Unis", "bio": "Écrivain et essayiste, voix majeure contre le racisme."},
+ {"id": "rumi", "name": "Rûmî", "dates": "1207 – 1273", "cat": "Poésie", "pays": "Perse", "bio": "Poète mystique dont les vers sur l'amour sont lus dans le monde entier."},
+ {"id": "vinci", "name": "Léonard de Vinci", "dates": "1452 – 1519", "cat": "Peinture", "pays": "Italie", "bio": "Peintre de « La Joconde », inventeur et ingénieur."},
+ {"id": "picasso", "name": "Pablo Picasso", "dates": "1881 – 1973", "cat": "Peinture", "pays": "Espagne", "bio": "Peintre et sculpteur, fortement inspiré par les arts africains."},
+ {"id": "kahlo", "name": "Frida Kahlo", "dates": "1907 – 1954", "cat": "Peinture", "pays": "Mexique", "bio": "Peintre aux autoportraits célèbres, symbole de courage."},
+ {"id": "basquiat", "name": "Jean-Michel Basquiat", "dates": "1960 – 1988", "cat": "Peinture", "pays": "États-Unis", "bio": "Peintre d'origine haïtienne, il a fait entrer l'histoire noire dans l'art contemporain."},
+ {"id": "mozart", "name": "Wolfgang Amadeus Mozart", "dates": "1756 – 1791", "cat": "Musique", "pays": "Autriche", "bio": "Compositeur de génie, plus de 600 œuvres en 35 ans de vie."},
+ {"id": "beethoven", "name": "Ludwig van Beethoven", "dates": "1770 – 1827", "cat": "Musique", "pays": "Allemagne", "bio": "Compositeur de la « Neuvième Symphonie », écrite alors qu'il était sourd."},
+ {"id": "armstrong", "name": "Louis Armstrong", "dates": "1901 – 1971", "cat": "Musique", "pays": "États-Unis", "bio": "Trompettiste et chanteur, géant du jazz. « What a Wonderful World »."},
+ {"id": "simone", "name": "Nina Simone", "dates": "1933 – 2003", "cat": "Musique", "pays": "États-Unis", "bio": "Pianiste et chanteuse, voix du mouvement des droits civiques. Elle a vécu au Liberia."},
+ {"id": "marley", "name": "Bob Marley", "dates": "1945 – 1981", "cat": "Musique", "pays": "Jamaïque", "bio": "Roi du reggae, il a chanté pour l'Afrique et pour la libération du Zimbabwe."},
+ {"id": "miles", "name": "Miles Davis", "dates": "1926 – 1991", "cat": "Musique", "pays": "États-Unis", "bio": "Trompettiste qui a réinventé le jazz plusieurs fois."},
+ {"id": "ali", "name": "Muhammad Ali", "dates": "1942 – 2016", "cat": "Sport", "pays": "États-Unis", "bio": "Champion du monde de boxe, célèbre pour son combat à Kinshasa en 1974 et ses engagements."},
+ {"id": "pele", "name": "Pelé", "dates": "1940 – 2022", "cat": "Sport", "pays": "Brésil", "bio": "Footballeur, trois fois champion du monde avec le Brésil."},
+ {"id": "owens", "name": "Jesse Owens", "dates": "1913 – 1980", "cat": "Sport", "pays": "États-Unis", "bio": "Quatre médailles d'or aux Jeux olympiques de Berlin en 1936."},
+ {"id": "chaplin", "name": "Charlie Chaplin", "dates": "1889 – 1977", "cat": "Cinéma", "pays": "Angleterre", "bio": "Acteur et réalisateur, créateur de Charlot."}
+];
+let byId={};
+
+/* ---------- état ---------- */
+const STORE='kaloum-site-v1';
+const REF={"app":"rues-de-kaloum","version":1,"date":"2026-10-17T06:11:04.625Z","frozenAt":"2026-10-17T06:10:08.453Z","over":{"n:Boulevard de la Nation":{"pid":"samory"},"n:Avenue du Port":{"pid":"alfayaya"},"n:Rue KA. 062":{"pid":"olympio"},"n:Avenue du 25 Août 1958":{"pid":"achebe"},"n:5e Avenue":{"pid":"sankara"},"n:Avenue M'Balia Camara":{"pid":"waligoumba"},"n:3e Avenue":{"pid":"cheikhanta"},"n:Avenue de la République":{"pid":"bokarbiro"},"n:Boulevard Ahmed Sekou Touré":{"pid":"sorymawdo"},"n:1er Avenue":{"pid":"mamadykeita"},"n:Boulevard Diallo Telly":{"pid":"keletigui"},"n:Avenue Colonel Binta Pillote Diallo":{"pid":"siradiou"},"n:1er Boulevard":{"pid":"modibo"},"n:Rue KA 002":{"pid":"farka"},"n:Avenue Hadja Aissatou Mofory Bangoura":{"pid":"abdelkader"},"n:2e Avenue":{"pid":"alinesitoe"},"n:Avenue William Tubman":{"pid":"mandela"},"n:9e Avenue":{"pid":"nzinga"},"n:Rond-Point du Port":{"pid":"dinahsalifou"},"n:Avenue de la Gare":{"pid":"nyerere"},"n:Rue KA. 040":{"pid":"senghor"},"n:Rue KA. 028":{"pid":"rosaparks"},"n:Avenue Louis Lansana Beavogui":{"pid":"ahmedbaba"},"n:Avenue du 5 Septembre 2021":{"pid":"ibnbattuta"},"n:11e Avenue":{"pid":"mombeya"},"n:11e Boulevard":{"pid":"morykante"},"n:Rue KA. 048":{"pid":"toussaint"},"n:Rue KA. 052":{"pid":"mlk"},"n:9e Boulevard":{"pid":"boganda"},"n:Rue KA. 074":{"pid":"maathai"},"n:Rue KA.068":{"pid":"salifkeita"},"n:Rue KA. 082":{"pid":"tubman"},"n:Rue KA. 049":{"pid":"fanon"},"n:Rue KA. 084":{"pid":"fela"},"n:Rue KA. 051":{"pid":"sirleaf"},"n:Boulevard Général Lansana Conté":{"pid":"camaralaye"},"n:10e Boulevard":{"pid":"yacine"},"n:Boulevard Maritime":{"pid":"soundiata"},"n:Corniche Sud":{"pid":"fodeba"},"n:Autoroute Fidel Castro":{"pid":"mbalia"},"n:Rond-Point Samory Touré":{"pid":"diallotelli"},"n:le Niger":{"pid":"wandel"},"n:4e Avenue":{"pid":"hampate"},"n:Pont du 8 Novembre":{"pid":"jeannemartin"},"n:Rue KA. 045":{"pid":"etoo"},"n:Avenue Hadja Saran Daraba":{"pid":"saifoulaye"},"n:Rue KA. 034":{"pid":"drogba"},"n:Rue KA. 036":{"pid":"newton"},"n:Rue KA. 088":{"pid":"mansamoussa"},"n:Avenue Docteur Rober Accar Nadjib":{"pid":"annan"},"n:7e Avenue":{"pid":"gurnah"},"n:Boulevard de Boulbinet":{"pid":"demba"},"n:Avenue du 3 Avril 1984":{"pid":"asantewaa"},"n:Rue KA. 042":{"pid":"avicenne"},"n:Avenue Hadja Rabiatou Serah Diallo":{"pid":"tutu"},"n:Rond-Point de Nimba":{"pid":"mafory"},"n:Avenue du 1er Mars 1960":{"pid":"funmilayo"},"n:Pénétrante du Port Autonome de Conakry":{"pid":"sassine"},"n:AVENUE Dinah Salifou":{"pid":"mariamaba"},"n:Avenue Général Noumandjan Kéita":{"pid":"fantamady"},"u:38664159":{"pid":"biko"},"u:38664205":{"pid":"manu"},"u:38698400":{"pid":"mane"},"u:38698407":{"pid":"saro"},"u:38698453":{"pid":"dubois"},"u:38698455":{"pid":"cesaire"},"u:38698544":{"pid":"ngugi"},"u:38698552":{"pid":"sembene"},"u:38698553":{"pid":"youssou"},"u:38698560":{"pid":"adichie"},"u:38698561":{"pid":"baldwin"},"u:38893882":{"pid":"hugo"},"u:38895173":{"pid":"ibnkhaldoun"},"u:217952237":{"pid":"galilee"},"u:217967228":{"pid":"gandhi"},"u:269867009":{"pid":"umnyobe"},"u:269867015":{"pid":"pasteur"},"u:269867017":{"pid":"khwarizmi"},"u:269867023":{"pid":"kidjo"},"u:270579425":{"pid":"papabouba"},"u:291395358":{"pid":"kandia"},"u:291504351":{"pid":"douglass"},"u:338615025":{"pid":"angelou"},"u:364654187":{"pid":"bolivar"},"u:376491013":{"pid":"vinci"},"u:376491014":{"pid":"tolstoi"},"u:441776076":{"pid":"morrison"},"u:448572357":{"pid":"cesaria"},"u:550013248":{"pid":"mukwege"},"u:550013254":{"pid":"soyinka"},"u:636060853":{"pid":"einstein"},"u:690223571":{"pid":"niane"},"u:827899928":{"pid":"curie"},"u:914338675":{"pid":"monenembo"},"u:919187263":{"pid":"picasso"},"u:963538973":{"pid":"shakespeare"},"u:1107646371":{"pid":"neruda"},"u:1138157900":{"pid":"nkrumah"},"u:1138157901":{"pid":"cabral"},"u:1138157908":{"pid":"makeba"},"u:1138157909":{"pid":"omartall"},"u:1201571646":{"pid":"malcolmx"},"u:1201571647":{"pid":"garvey"},"u:1317168767":{"pid":"nsoumer"},"u:1382059503":{"pid":"moliere"},"u:1384107317":{"pid":"garciamarquez"},"u:1384107318":{"pid":"rumi"},"u:1463606917":{"pid":"lumumba"},"u:1517534782":{"pid":"karamokoalfa"}},"qcodes":{"Almamiya":{"cp":"88001","lat":9.510468,"lon":-13.711324},"Manquepas":{"cp":"88002","lat":9.507721,"lon":-13.709694},"Cité Petit Bateau":{"cp":"88003","lat":9.518517,"lon":-13.702514}},"start":{"n:Boulevard de la Nation":[9.508907,-13.710354],"n:Avenue du Port":[9.515367,-13.713946],"n:Rue KA. 062":[9.515005,-13.705829],"n:Avenue du 25 Août 1958":[9.508936,-13.710448],"n:5e Avenue":[9.509627,-13.718804],"n:Avenue M'Balia Camara":[9.504746,-13.714156],"n:3e Avenue":[9.507823,-13.717727],"n:Avenue de la République":[9.509647,-13.714968],"n:Boulevard Ahmed Sekou Touré":[9.515039,-13.713841],"n:1er Avenue":[9.50706,-13.719311],"n:Boulevard Diallo Telly":[9.503834,-13.708053],"n:Avenue Colonel Binta Pillote Diallo":[9.504746,-13.714156],"n:1er Boulevard":[9.505112,-13.718254],"n:Rue KA 002":[9.504884,-13.717137],"n:Avenue Hadja Aissatou Mofory Bangoura":[9.503917,-13.709753],"n:2e Avenue":[9.506889,-13.71552],"n:Avenue William Tubman":[9.512074,-13.718317],"n:9e Avenue":[9.513127,-13.717792],"n:Rond-Point du Port":[9.515081,-13.714104],"n:Avenue de la Gare":[9.513811,-13.714169],"n:Rue KA. 040":[9.512801,-13.712749],"n:Rue KA. 028":[9.510874,-13.714732],"n:Avenue Louis Lansana Beavogui":[9.504884,-13.717137],"n:Avenue du 5 Septembre 2021":[9.509899,-13.716194],"n:11e Avenue":[9.513611,-13.706112],"n:11e Boulevard":[9.511063,-13.701444],"n:Rue KA. 048":[9.51227,-13.702886],"n:Rue KA. 052":[9.513701,-13.702553],"n:9e Boulevard":[9.513281,-13.704398],"n:Rue KA. 074":[9.516431,-13.703763],"n:Rue KA.068":[9.516363,-13.705568],"n:Rue KA. 082":[9.517294,-13.69853],"n:Rue KA. 049":[9.517074,-13.696926],"n:Rue KA. 084":[9.517641,-13.697274],"n:Rue KA. 051":[9.517481,-13.69536],"n:Boulevard Général Lansana Conté":[9.506299,-13.715635],"n:10e Boulevard":[9.510399,-13.703269],"n:Boulevard Maritime":[9.50706,-13.719311],"n:Corniche Sud":[9.514103,-13.700871],"n:Autoroute Fidel Castro":[9.520326,-13.694583],"n:Rond-Point Samory Touré":[9.524393,-13.68657],"n:le Niger":[9.524126,-13.686652],"n:4e Avenue":[9.508616,-13.717567],"n:Pont du 8 Novembre":[9.525216,-13.688005],"n:Rue KA. 045":[9.513881,-13.699845],"n:Avenue Hadja Saran Daraba":[9.502619,-13.713322],"n:Rue KA. 034":[9.511041,-13.710047],"n:Rue KA. 036":[9.510415,-13.706647],"n:Rue KA. 088":[9.513192,-13.70394],"n:Avenue Docteur Rober Accar Nadjib":[9.505132,-13.706014],"n:7e Avenue":[9.510843,-13.717149],"n:Boulevard de Boulbinet":[9.507951,-13.704279],"n:Avenue du 3 Avril 1984":[9.51041,-13.714821],"n:Rue KA. 042":[9.513981,-13.715296],"n:Avenue Hadja Rabiatou Serah Diallo":[9.504219,-13.711435],"n:Rond-Point de Nimba":[9.520326,-13.694583],"n:Avenue du 1er Mars 1960":[9.509327,-13.713467],"n:Pénétrante du Port Autonome de Conakry":[9.516648,-13.715424],"n:AVENUE Dinah Salifou":[9.509077,-13.711964],"n:Avenue Général Noumandjan Kéita":[9.508266,-13.704448],"u:38664159":[9.505429,-13.714237],"u:38664205":[9.50719,-13.712348],"u:38698400":[9.511645,-13.703016],"u:38698407":[9.510727,-13.70234],"u:38698453":[9.514826,-13.71234],"u:38698455":[9.514546,-13.710845],"u:38698544":[9.515934,-13.70565],"u:38698552":[9.517374,-13.70362],"u:38698553":[9.51547,-13.705739],"u:38698560":[9.513774,-13.699266],"u:38698561":[9.515039,-13.699629],"u:38846681":[9.524527,-13.686951],"u:38893882":[9.517926,-13.701786],"u:38895173":[9.505112,-13.718254],"u:174022129":[9.524121,-13.686288],"u:217952237":[9.51555,-13.697315],"u:217967228":[9.508487,-13.719023],"u:269867009":[9.513243,-13.704201],"u:269867015":[9.514004,-13.704261],"u:269867017":[9.516217,-13.698784],"u:269867023":[9.516022,-13.698658],"u:270579425":[9.514695,-13.700772],"u:291395356":[9.524217,-13.686675],"u:291395358":[9.524902,-13.687627],"u:291504351":[9.510611,-13.713187],"u:338615025":[9.513987,-13.698647],"u:364654187":[9.507751,-13.719173],"u:376491013":[9.518741,-13.694206],"u:376491014":[9.518589,-13.693757],"u:441776076":[9.518125,-13.693377],"u:448572357":[9.522372,-13.690672],"u:550013247":[9.5171,-13.704641],"u:550013248":[9.517325,-13.705077],"u:550013254":[9.518002,-13.702171],"u:551360786":[9.518741,-13.694206],"u:636060853":[9.517113,-13.696286],"u:690223569":[9.524902,-13.687627],"u:690223571":[9.525216,-13.688005],"u:827899928":[9.516619,-13.704726],"u:914338675":[9.520294,-13.694895],"u:919187263":[9.514215,-13.698229],"u:963538973":[9.516665,-13.695994],"u:1107646371":[9.510753,-13.706577],"u:1138157900":[9.518194,-13.706024],"u:1138157901":[9.517878,-13.706571],"u:1138157908":[9.518014,-13.706221],"u:1138157909":[9.517878,-13.706571],"u:1201571645":[9.515341,-13.697962],"u:1201571646":[9.514215,-13.698229],"u:1201571647":[9.514293,-13.698643],"u:1317168767":[9.510399,-13.703269],"u:1382059503":[9.511014,-13.703147],"u:1384107317":[9.504777,-13.718316],"u:1384107318":[9.50454,-13.71836],"u:1462517077":[9.504856,-13.713637],"u:1463606917":[9.514039,-13.715312],"u:1517534782":[9.508759,-13.710496]},"dir":{},"extra":[],"renameAll":true};
+const DATA=[{"k":"n:Boulevard de la Nation","o":"Boulevard de la Nation","h":"primary","i":[31786023,174023440,291504334,412225261,636150062],"ow":1,"g":[[[-13.706474,9.511289],[-13.706359,9.511357],[-13.706202,9.511451],[-13.706159,9.511477],[-13.704694,9.512358],[-13.703499,9.513109],[-13.702593,9.513679],[-13.702553,9.513701],[-13.701701,9.514179],[-13.701585,9.514239],[-13.701409,9.514346],[-13.701055,9.51456],[-13.70077,9.514732],[-13.699545,9.515482],[-13.699297,9.51563],[-13.698844,9.515908],[-13.698658,9.516022],[-13.698286,9.516249],[-13.698192,9.516306],[-13.697861,9.516508],[-13.697015,9.517019],[-13.696926,9.517074],[-13.696451,9.517365],[-13.695564,9.517923],[-13.695153,9.518164]],[[-13.694206,9.518741],[-13.694119,9.518853],[-13.694074,9.518969],[-13.694069,9.519073],[-13.694085,9.519247],[-13.69414,9.519366],[-13.694219,9.519495],[-13.694374,9.519789],[-13.694424,9.519935],[-13.694467,9.520104]],[[-13.694642,9.520087],[-13.694617,9.519983],[-13.694295,9.519476],[-13.694217,9.519331],[-13.694166,9.519208],[-13.694146,9.519087],[-13.694165,9.518954],[-13.694223,9.51884],[-13.69441,9.518656],[-13.695153,9.518164]],[[-13.695153,9.518164],[-13.69513,9.518178],[-13.694555,9.518483],[-13.694292,9.518662],[-13.694206,9.518741]],[[-13.710354,9.508907],[-13.709577,9.50937],[-13.709008,9.509718],[-13.708517,9.510036],[-13.708363,9.510148],[-13.706894,9.51103],[-13.706589,9.511219],[-13.706474,9.511289]]]},{"k":"n:Avenue du Port","o":"Avenue du Port","h":"primary","i":[31786044,38895164,1430575212,1430575213],"ow":1,"g":[[[-13.694679,9.520264],[-13.694895,9.520294],[-13.69512,9.520203],[-13.695226,9.520144],[-13.695288,9.52011],[-13.695882,9.519634],[-13.696468,9.519163],[-13.697699,9.51824],[-13.698142,9.517871],[-13.698512,9.517619],[-13.698757,9.517465],[-13.698934,9.517429],[-13.699101,9.517422],[-13.699447,9.517482],[-13.699608,9.517519],[-13.700194,9.517627],[-13.701786,9.517926],[-13.702171,9.518002],[-13.703451,9.518231]],[[-13.703451,9.518231],[-13.703617,9.518255],[-13.703794,9.51824],[-13.703949,9.518192],[-13.704109,9.518115],[-13.705077,9.517325],[-13.705432,9.517022],[-13.707236,9.515565],[-13.707316,9.515521],[-13.707491,9.51544],[-13.707656,9.515405],[-13.707884,9.515414],[-13.708427,9.515517],[-13.709505,9.515722],[-13.710592,9.515918],[-13.712059,9.516216],[-13.712386,9.516276],[-13.712609,9.51627],[-13.712766,9.516252],[-13.71292,9.516225],[-13.713178,9.516167],[-13.713389,9.516072],[-13.713643,9.515854]],[[-13.713835,9.515322],[-13.71384,9.51546],[-13.713804,9.515581],[-13.713643,9.515854]],[[-13.713643,9.515854],[-13.713885,9.515572],[-13.713937,9.515484],[-13.713949,9.515436],[-13.713946,9.515367]]]},{"k":"n:Rue KA. 062","o":"Rue KA. 062","h":"residential","i":[31786104],"ow":0,"g":[[[-13.705829,9.515005],[-13.704132,9.514682],[-13.702612,9.514411],[-13.702476,9.514393],[-13.702406,9.514375],[-13.701585,9.514239],[-13.701248,9.514193],[-13.700871,9.514103]]]},{"k":"n:Avenue du 25 Août 1958","o":"Avenue du 25 Août 1958","h":"residential","i":[36932966],"ow":0,"g":[[[-13.709665,9.512926],[-13.709792,9.512273],[-13.70993,9.511629],[-13.710047,9.511041],[-13.710159,9.510471],[-13.710254,9.509991],[-13.710349,9.509521],[-13.710448,9.508936]]]},{"k":"n:5e Avenue","o":"5e Avenue","h":"residential","i":[38090574],"ow":0,"g":[[[-13.718804,9.509627],[-13.717441,9.50937],[-13.716325,9.509158],[-13.715115,9.508941],[-13.713814,9.508686],[-13.713605,9.50865],[-13.713282,9.508612],[-13.712938,9.508558],[-13.712268,9.508416],[-13.712118,9.508376],[-13.710625,9.508101],[-13.710143,9.508002],[-13.708966,9.507803],[-13.707342,9.507429],[-13.707222,9.507407],[-13.705609,9.507115]]]},{"k":"n:Avenue M'Balia Camara","o":"Avenue M'Balia Camara","h":"tertiary","i":[38090594],"ow":0,"g":[[[-13.714156,9.504746],[-13.714229,9.504765],[-13.714272,9.504787],[-13.714306,9.504822],[-13.714316,9.504858],[-13.714316,9.504907],[-13.714237,9.505429],[-13.714103,9.506004],[-13.71401,9.506549],[-13.713917,9.507097],[-13.713728,9.507893],[-13.713637,9.508468],[-13.713605,9.50865],[-13.71354,9.508956],[-13.713467,9.509327]]]},{"k":"n:3e Avenue","o":"3e Avenue","h":"residential","i":[38090753],"ow":0,"g":[[[-13.705903,9.505553],[-13.707521,9.505856],[-13.707648,9.50588],[-13.708023,9.505958],[-13.70927,9.506204],[-13.709529,9.506255],[-13.709679,9.506286],[-13.710912,9.506533],[-13.712419,9.506801],[-13.713917,9.507097],[-13.715194,9.50735],[-13.715421,9.507395],[-13.716608,9.507601],[-13.717727,9.507823]]]},{"k":"n:Avenue de la République","o":"Avenue de la République","h":"primary","i":[38631191,571806433,636150054,1063034145],"ow":0,"g":[[[-13.704279,9.507951],[-13.704286,9.507829],[-13.7043,9.507779],[-13.70433,9.507742],[-13.704367,9.507716],[-13.704408,9.507696],[-13.70445,9.507683],[-13.704508,9.507676],[-13.704568,9.507676],[-13.705485,9.507854],[-13.706309,9.508008],[-13.707073,9.508148]],[[-13.714968,9.509647],[-13.714464,9.509547],[-13.714198,9.509488],[-13.713807,9.509402],[-13.713467,9.509327],[-13.711964,9.509077],[-13.711023,9.508905],[-13.710973,9.508896],[-13.710545,9.508824]],[[-13.710372,9.508799],[-13.709328,9.508585],[-13.708833,9.508489],[-13.708242,9.508374],[-13.707643,9.508258],[-13.70743,9.508217],[-13.707205,9.508173],[-13.707073,9.508148]],[[-13.704568,9.507676],[-13.704434,9.507643],[-13.704295,9.507616],[-13.70421,9.50759],[-13.704087,9.507538]]]},{"k":"n:Boulevard Ahmed Sekou Touré","o":"Boulevard Ahmed Sekou Touré","h":"tertiary","i":[38652599,571806430,571806431],"ow":1,"g":[[[-13.713427,9.515022],[-13.713223,9.514985],[-13.71234,9.514826],[-13.71118,9.514609],[-13.710845,9.514546],[-13.710375,9.514455],[-13.709857,9.514354],[-13.709775,9.514338],[-13.709408,9.514258],[-13.709096,9.51419],[-13.707846,9.513948],[-13.706112,9.513611]],[[-13.713427,9.515022],[-13.713568,9.515091],[-13.713696,9.515176],[-13.713798,9.51528]],[[-13.713841,9.515039],[-13.713721,9.515049],[-13.713605,9.515044],[-13.713427,9.515022]]]},{"k":"n:1er Avenue","o":"1er Avenue","h":"tertiary","i":[38663458],"ow":0,"g":[[[-13.70684,9.504606],[-13.707731,9.504762],[-13.707865,9.504786],[-13.709487,9.505101],[-13.711139,9.505462],[-13.712633,9.50571],[-13.714103,9.506004],[-13.715635,9.506299],[-13.716793,9.50653],[-13.717939,9.506775],[-13.718993,9.506946],[-13.71928,9.507022],[-13.719298,9.507039],[-13.719311,9.50706]]]},{"k":"n:Boulevard Diallo Telly","o":"Boulevard Diallo Telly","h":"tertiary","i":[38663459,552008447,552008448,636150063],"ow":1,"g":[[[-13.706589,9.511219],[-13.706865,9.509855],[-13.70705,9.508891],[-13.707205,9.508173],[-13.707342,9.507429],[-13.707493,9.506667],[-13.707648,9.50588],[-13.707757,9.505356],[-13.707865,9.504786],[-13.707982,9.504195],[-13.708053,9.503834]],[[-13.707073,9.508148],[-13.706941,9.508871],[-13.70685,9.509337],[-13.706756,9.509823],[-13.706694,9.510147],[-13.706647,9.510415],[-13.706577,9.510753],[-13.706542,9.510936],[-13.706474,9.511289]],[[-13.705432,9.517022],[-13.705568,9.516363],[-13.70565,9.515934],[-13.705739,9.51547],[-13.705829,9.515005],[-13.706112,9.513611],[-13.706303,9.512583],[-13.706366,9.512292],[-13.706504,9.511668],[-13.706525,9.511558],[-13.706589,9.511219]],[[-13.70789,9.503938],[-13.707731,9.504762],[-13.707622,9.505328],[-13.707521,9.505856],[-13.707369,9.506644],[-13.707222,9.507407],[-13.707073,9.508148]]]},{"k":"n:Avenue Colonel Binta Pillote Diallo","o":"Avenue Colonel Binta Pillote Diallo","h":"tertiary","i":[38663482],"ow":0,"g":[[[-13.714156,9.504746],[-13.713874,9.504687],[-13.713656,9.504647],[-13.712882,9.504508],[-13.712228,9.504375],[-13.711705,9.504272],[-13.711435,9.504219],[-13.709753,9.503917],[-13.709034,9.50379],[-13.708694,9.503729],[-13.708433,9.503683],[-13.708372,9.503685],[-13.708303,9.503698],[-13.708192,9.503741],[-13.708053,9.503834],[-13.70789,9.503938],[-13.707008,9.504499],[-13.70684,9.504606],[-13.706153,9.505047],[-13.706014,9.505132],[-13.704425,9.506129],[-13.704326,9.506232],[-13.70426,9.506373],[-13.704217,9.506587],[-13.70413,9.507022],[-13.704084,9.507449],[-13.704087,9.507538],[-13.704119,9.507642],[-13.704161,9.507722],[-13.704279,9.507951]]]},{"k":"n:1er Boulevard","o":"1er Boulevard","h":"residential","i":[38663784,38698271,549261642],"ow":0,"g":[[[-13.717441,9.50937],[-13.717567,9.508616],[-13.717645,9.508206],[-13.717727,9.507823],[-13.71779,9.507514],[-13.717939,9.506775],[-13.718291,9.505152],[-13.718278,9.505128],[-13.718254,9.505112]],[[-13.717111,9.511027],[-13.716946,9.51182],[-13.716843,9.512331],[-13.716723,9.512927],[-13.71649,9.514104]],[[-13.717149,9.510843],[-13.717111,9.511027]]]},{"k":"n:Rue KA 002","o":"Rue KA 002","h":"unclassified","i":[38663844],"ow":0,"g":[[[-13.717137,9.504884],[-13.715136,9.504528],[-13.715003,9.504504],[-13.714395,9.504396],[-13.714156,9.504746]]]},{"k":"n:Avenue Hadja Aissatou Mofory Bangoura","o":"Avenue Hadja Aissatou Mofory Bangoura","h":"residential","i":[38663961,338940203],"ow":0,"g":[[[-13.709753,9.503917],[-13.709604,9.504511],[-13.709487,9.505101],[-13.709377,9.505664],[-13.70927,9.506204],[-13.709211,9.506649],[-13.709118,9.507001],[-13.708966,9.507803],[-13.708833,9.508489],[-13.708692,9.509198],[-13.708579,9.509728],[-13.708543,9.509916],[-13.708517,9.510036]],[[-13.70852,9.510155],[-13.708497,9.51027],[-13.708402,9.510745],[-13.708285,9.511308],[-13.708142,9.51194],[-13.708014,9.51259]]]},{"k":"n:2e Avenue","o":"2e Avenue","h":"residential","i":[38664144],"ow":0,"g":[[[-13.71552,9.506889],[-13.71401,9.506549],[-13.712524,9.506259],[-13.711025,9.505988],[-13.709377,9.505664],[-13.708075,9.505419],[-13.707894,9.505377],[-13.707828,9.505366],[-13.707757,9.505356],[-13.707683,9.505338],[-13.707622,9.505328],[-13.707211,9.505274],[-13.706153,9.505047]]]},{"k":"n:Avenue William Tubman","o":"Avenue William Tubman","h":"residential","i":[38698076,291504353,291504356],"ow":1,"g":[[[-13.718317,9.512074],[-13.717523,9.511923],[-13.71747,9.511913],[-13.716946,9.51182],[-13.715863,9.511573],[-13.714648,9.511312]],[[-13.714648,9.511312],[-13.713866,9.511172],[-13.713096,9.511041]],[[-13.713096,9.511041],[-13.71164,9.510756],[-13.711092,9.510651],[-13.710159,9.510471],[-13.70852,9.510155],[-13.708363,9.510148],[-13.706865,9.509855],[-13.706756,9.509823],[-13.705633,9.5096],[-13.705203,9.509515],[-13.704871,9.509451],[-13.704253,9.509332]]]},{"k":"n:9e Avenue","o":"9e Avenue","h":"residential","i":[38698087],"ow":0,"g":[[[-13.717792,9.513127],[-13.717403,9.513055],[-13.71715,9.513007],[-13.716723,9.512927],[-13.716148,9.512817],[-13.715887,9.512767],[-13.715633,9.51273],[-13.715416,9.51271],[-13.715201,9.512661],[-13.715,9.51262],[-13.714531,9.512526],[-13.714423,9.512486],[-13.713612,9.512322],[-13.713134,9.512225],[-13.712874,9.512181],[-13.711408,9.511935],[-13.710871,9.511815],[-13.70993,9.511629],[-13.70961,9.511581],[-13.709101,9.511457],[-13.708851,9.511454],[-13.708621,9.511399],[-13.708526,9.511368],[-13.708285,9.511308],[-13.706894,9.51103]]]},{"k":"n:Rond-Point du Port","o":"Rond-Point du Port","h":"primary","i":[38698125],"ow":1,"g":[[[-13.714104,9.515081],[-13.714059,9.515036],[-13.714001,9.515009],[-13.713937,9.515003],[-13.713886,9.515015],[-13.713841,9.515039],[-13.713805,9.515076],[-13.71378,9.51512],[-13.713769,9.515175],[-13.713775,9.51523],[-13.713798,9.51528],[-13.713835,9.515322],[-13.713883,9.515351],[-13.713946,9.515367],[-13.713964,9.515368],[-13.713994,9.51536],[-13.714046,9.515339],[-13.71409,9.515303],[-13.71412,9.515256],[-13.714135,9.515202],[-13.71413,9.515139],[-13.714104,9.515081]]]},{"k":"n:Avenue de la Gare","o":"Avenue de la Gare","h":"unclassified","i":[38698141],"ow":0,"g":[[[-13.714169,9.513811],[-13.712615,9.513479],[-13.711176,9.51317],[-13.709665,9.512926],[-13.708014,9.51259],[-13.707185,9.51247],[-13.706366,9.512292]]]},{"k":"n:Rue KA. 040","o":"Rue KA. 040","h":"residential","i":[38698144],"ow":0,"g":[[[-13.712749,9.512801],[-13.711292,9.512553],[-13.709792,9.512273],[-13.708142,9.51194],[-13.706504,9.511668]]]},{"k":"n:Rue KA. 028","o":"Rue KA. 028","h":"residential","i":[38698200],"ow":1,"g":[[[-13.714732,9.510874],[-13.714615,9.510856],[-13.714504,9.510837],[-13.713849,9.510711],[-13.713463,9.510643],[-13.713187,9.510611]]]},{"k":"n:Avenue Louis Lansana Beavogui","o":"Avenue Louis Lansana Beavogui","h":"residential","i":[38698229,549261659],"ow":0,"g":[[[-13.717137,9.504884],[-13.716793,9.50653],[-13.716608,9.507601],[-13.716533,9.508079],[-13.716478,9.508426],[-13.716325,9.509158],[-13.716309,9.509258]],[[-13.716071,9.510544],[-13.71605,9.510633],[-13.715998,9.510895],[-13.715863,9.511573],[-13.715633,9.51273],[-13.715536,9.513229],[-13.715433,9.513737],[-13.715399,9.513889]]]},{"k":"n:Avenue du 5 Septembre 2021","o":"Avenue du 5 Septembre 2021","h":"residential","i":[38698237],"ow":0,"g":[[[-13.714968,9.509647],[-13.715139,9.509679],[-13.716194,9.509899]]]},{"k":"n:11e Avenue","o":"11e Avenue","h":"secondary","i":[38698336,571806428],"ow":0,"g":[[[-13.706112,9.513611],[-13.704398,9.513281],[-13.704201,9.513243],[-13.703966,9.513198],[-13.70394,9.513192],[-13.703499,9.513109],[-13.702741,9.512967]],[[-13.702741,9.512967],[-13.70191,9.512797],[-13.701137,9.51264]]]},{"k":"n:11e Boulevard","o":"11e Boulevard","h":"secondary","i":[38698372,571806426,571806427],"ow":0,"g":[[[-13.700871,9.514103],[-13.700772,9.514695],[-13.70077,9.514732],[-13.700561,9.515773],[-13.700545,9.515876],[-13.700515,9.516056],[-13.700368,9.516776],[-13.700194,9.517627]],[[-13.701137,9.51264],[-13.701097,9.512852],[-13.700995,9.513402],[-13.700871,9.514103]],[[-13.701444,9.511063],[-13.701396,9.511331],[-13.701275,9.511939],[-13.701137,9.51264]]]},{"k":"n:Rue KA. 048","o":"Rue KA. 048","h":"residential","i":[38698401],"ow":0,"g":[[[-13.702886,9.51227],[-13.702051,9.512113],[-13.702045,9.512111],[-13.70196,9.512095],[-13.701861,9.512071],[-13.701662,9.512026],[-13.701275,9.511939]]]},{"k":"n:Rue KA. 052","o":"Rue KA. 052","h":"residential","i":[38698406],"ow":0,"g":[[[-13.700995,9.513402],[-13.701754,9.513547],[-13.702553,9.513701]]]},{"k":"n:9e Boulevard","o":"9e Boulevard","h":"residential","i":[38698539],"ow":0,"g":[[[-13.704398,9.513281],[-13.704261,9.514004],[-13.704132,9.514682],[-13.704038,9.51514],[-13.703957,9.51561],[-13.703866,9.516041],[-13.703763,9.516431],[-13.70362,9.517374],[-13.703554,9.51771],[-13.703451,9.518231]]]},{"k":"n:Rue KA. 074","o":"Rue KA. 074","h":"residential","i":[38698548],"ow":0,"g":[[[-13.703763,9.516431],[-13.702103,9.516165],[-13.700708,9.515906],[-13.700545,9.515876],[-13.700452,9.51586],[-13.699297,9.51563]]]},{"k":"n:Rue KA.068","o":"Rue KA.068","h":"residential","i":[38698554],"ow":0,"g":[[[-13.705568,9.516363],[-13.703866,9.516041]]]},{"k":"n:Rue KA. 082","o":"Rue KA. 082","h":"residential","i":[38698564],"ow":0,"g":[[[-13.697015,9.517019],[-13.69853,9.517294]]]},{"k":"n:Rue KA. 049","o":"Rue KA. 049","h":"residential","i":[38698570],"ow":0,"g":[[[-13.696926,9.517074],[-13.697274,9.517641],[-13.697566,9.518057],[-13.697699,9.51824]]]},{"k":"n:Rue KA. 084","o":"Rue KA. 084","h":"residential","i":[38698573],"ow":0,"g":[[[-13.697274,9.517641],[-13.695913,9.518474],[-13.694295,9.519476]]]},{"k":"n:Rue KA. 051","o":"Rue KA. 051","h":"residential","i":[38698576],"ow":0,"g":[[[-13.696468,9.519163],[-13.6963,9.518995],[-13.695913,9.518474],[-13.695725,9.518202],[-13.695638,9.518067],[-13.695564,9.517923],[-13.695435,9.517644],[-13.69536,9.517481]]]},{"k":"n:Boulevard Général Lansana Conté","o":"Boulevard Général Lansana Conté","h":"primary","i":[38894956,571806432,636150064,1315373561],"ow":1,"g":[[[-13.714002,9.514686],[-13.714033,9.514521],[-13.714169,9.513811],[-13.714423,9.512486],[-13.714648,9.511312],[-13.714732,9.510874],[-13.714821,9.51041],[-13.714865,9.510181],[-13.714968,9.509647]],[[-13.714104,9.515081],[-13.714059,9.514977],[-13.714034,9.514876],[-13.714002,9.514686]],[[-13.714002,9.514686],[-13.713886,9.515015]],[[-13.714968,9.509647],[-13.715115,9.508941],[-13.715226,9.508363],[-13.715264,9.508175],[-13.715421,9.507395],[-13.715441,9.507299],[-13.71552,9.506889],[-13.715604,9.506457],[-13.715635,9.506299]]]},{"k":"n:10e Boulevard","o":"10e Boulevard","h":"secondary","i":[38895080,615565336],"ow":0,"g":[[[-13.702593,9.513679],[-13.702517,9.514121],[-13.702503,9.514206],[-13.702486,9.514322],[-13.702476,9.514393],[-13.702434,9.51458],[-13.702279,9.515289],[-13.702103,9.516165],[-13.701942,9.517054],[-13.701786,9.517926]],[[-13.703269,9.510399],[-13.703195,9.510764],[-13.703147,9.511014],[-13.703016,9.511645],[-13.702886,9.51227],[-13.702741,9.512967],[-13.702593,9.513679]]]},{"k":"n:Boulevard Maritime","o":"Boulevard Maritime","h":"tertiary","i":[38895155,1463606912,1463606913,1463606915,1463606916,1463606918,1463606919,1463606921],"ow":1,"g":[[[-13.719311,9.50706],[-13.719314,9.507091],[-13.719312,9.507125],[-13.719173,9.507751],[-13.719039,9.508406],[-13.719023,9.508487],[-13.718937,9.50891],[-13.718865,9.509269],[-13.718804,9.509627],[-13.718317,9.512074],[-13.7182,9.512637],[-13.717891,9.512992],[-13.717792,9.513127],[-13.717586,9.514149],[-13.71753,9.514228],[-13.717438,9.514266],[-13.717185,9.514243],[-13.716896,9.514183],[-13.71649,9.514104],[-13.715735,9.513975]],[[-13.714249,9.515303],[-13.714135,9.515202]],[[-13.714046,9.515339],[-13.714249,9.515303]],[[-13.715735,9.513975],[-13.715632,9.513958],[-13.715592,9.513952],[-13.715533,9.513944],[-13.715477,9.513933]],[[-13.715471,9.514047],[-13.715546,9.514019],[-13.715601,9.514003],[-13.715639,9.513996],[-13.715735,9.513975]],[[-13.715312,9.514039],[-13.715301,9.514104],[-13.715282,9.514196],[-13.715267,9.514312]],[[-13.715267,9.514312],[-13.715334,9.514214],[-13.715372,9.514157],[-13.71542,9.51408]],[[-13.715267,9.514312],[-13.715229,9.514443],[-13.715096,9.514712],[-13.714949,9.514862],[-13.714666,9.515125],[-13.71453,9.515201],[-13.714426,9.515244],[-13.714249,9.515303]]]},{"k":"n:Corniche Sud","o":"Corniche Sud","h":"secondary","i":[38895260,38895325],"ow":0,"g":[[[-13.700871,9.514103],[-13.699845,9.513881],[-13.699574,9.513831],[-13.699266,9.513774],[-13.698058,9.513542],[-13.697909,9.513518],[-13.697859,9.513517],[-13.697821,9.513525],[-13.697789,9.513541],[-13.69776,9.513562],[-13.697744,9.513591],[-13.697696,9.513782],[-13.697654,9.514006],[-13.697446,9.5152],[-13.69741,9.515333],[-13.697368,9.515452],[-13.697315,9.51555],[-13.697249,9.515625],[-13.697175,9.515686],[-13.696793,9.51592],[-13.696452,9.516132],[-13.696364,9.516203],[-13.696279,9.516288],[-13.69623,9.516352],[-13.695994,9.516665],[-13.695508,9.517311],[-13.695433,9.517408],[-13.69536,9.517481],[-13.695298,9.517522],[-13.695212,9.517559],[-13.695061,9.517603],[-13.694846,9.517645],[-13.694474,9.517698],[-13.693855,9.517837],[-13.693741,9.517883],[-13.69364,9.517938],[-13.693482,9.518049],[-13.693377,9.518125]],[[-13.693377,9.518125],[-13.693302,9.518202],[-13.693177,9.518341],[-13.693032,9.518527],[-13.692759,9.518892],[-13.692476,9.51926],[-13.692174,9.519637],[-13.692061,9.519747],[-13.691976,9.519821],[-13.691862,9.51989],[-13.691719,9.51997],[-13.691525,9.520046],[-13.691285,9.520105],[-13.691035,9.520126],[-13.690435,9.520143],[-13.69012,9.520161],[-13.689952,9.520197],[-13.689788,9.520246],[-13.689666,9.520304],[-13.689536,9.520383],[-13.689359,9.520527],[-13.689021,9.520886],[-13.688643,9.521427],[-13.688246,9.521957],[-13.688062,9.52219],[-13.687854,9.522467],[-13.687758,9.522594],[-13.687567,9.522838],[-13.68677,9.523885]]]},{"k":"n:Autoroute Fidel Castro","o":"Autoroute Fidel Castro","h":"trunk","i":[140784959,174021918],"ow":1,"g":[[[-13.688146,9.52555],[-13.688213,9.525452],[-13.68846,9.525139],[-13.688792,9.524739],[-13.689243,9.524199],[-13.689708,9.523578],[-13.690256,9.522868],[-13.690413,9.522674],[-13.690606,9.522436],[-13.690672,9.522372],[-13.690902,9.522153],[-13.691254,9.521846],[-13.69142,9.521743],[-13.691825,9.521515],[-13.692362,9.521263],[-13.692656,9.521147],[-13.693133,9.520949],[-13.693454,9.520815],[-13.69406,9.520556],[-13.694583,9.520326]],[[-13.694435,9.520161],[-13.694323,9.520278],[-13.69423,9.52036],[-13.693464,9.520675],[-13.692493,9.521111],[-13.691724,9.521444],[-13.69136,9.52164],[-13.69109,9.521828],[-13.690727,9.522134],[-13.690558,9.522308],[-13.690483,9.522385],[-13.690207,9.522712],[-13.689137,9.524126],[-13.688886,9.524475],[-13.688598,9.524833],[-13.688386,9.525085],[-13.688078,9.525449]]]},{"k":"n:Rond-Point Samory Touré","o":"Rond-Point Samory Touré","h":"primary","i":[174022132],"ow":1,"g":[[[-13.686345,9.524055],[-13.686313,9.524085],[-13.686288,9.524121],[-13.686285,9.524128],[-13.68627,9.524161],[-13.686263,9.524205],[-13.686263,9.524212]],[[-13.68657,9.524393],[-13.686581,9.524388],[-13.68662,9.524356],[-13.68665,9.524314],[-13.686668,9.524267],[-13.686675,9.524217],[-13.686669,9.52417],[-13.686652,9.524126],[-13.68661,9.524076],[-13.686594,9.524057],[-13.686512,9.524019],[-13.686469,9.524015],[-13.686425,9.524019],[-13.686383,9.524033],[-13.686345,9.524055]]]},{"k":"n:le Niger","o":"le Niger","h":"secondary","i":[174022136,571806425],"ow":1,"g":[[[-13.686652,9.524126],[-13.686677,9.524079],[-13.686719,9.523995],[-13.68677,9.523885]],[[-13.68677,9.523885],[-13.686512,9.524019]]]},{"k":"n:4e Avenue","o":"4e Avenue","h":"residential","i":[217967223],"ow":0,"g":[[[-13.717567,9.508616],[-13.716478,9.508426],[-13.715394,9.508203],[-13.715264,9.508175],[-13.713728,9.507893],[-13.712264,9.507618],[-13.71151,9.50745],[-13.71114,9.50738],[-13.710954,9.507348],[-13.710781,9.507311],[-13.710276,9.507224],[-13.709118,9.507001],[-13.707493,9.506667],[-13.707369,9.506644],[-13.705747,9.506349]]]},{"k":"n:Pont du 8 Novembre","o":"Pont du 8 Novembre","h":"primary","i":[291395359,690223570],"ow":1,"g":[[[-13.688426,9.525818],[-13.688258,9.525567],[-13.688132,9.525392],[-13.688062,9.525295],[-13.688005,9.525216]],[[-13.687946,9.525253],[-13.688007,9.525332],[-13.688077,9.525428],[-13.688206,9.525603],[-13.688296,9.525735],[-13.688369,9.525858]]]},{"k":"n:Rue KA. 045","o":"Rue KA. 045","h":"residential","i":[338983909],"ow":0,"g":[[[-13.699845,9.513881],[-13.699742,9.514501],[-13.699629,9.515039],[-13.699545,9.515482]]]},{"k":"n:Avenue Hadja Saran Daraba","o":"Avenue Hadja Saran Daraba","h":"secondary","i":[375144908],"ow":0,"g":[[[-13.711964,9.509077],[-13.712118,9.508376],[-13.712264,9.507618],[-13.712348,9.50719],[-13.712419,9.506801],[-13.712524,9.506259],[-13.712633,9.50571],[-13.712751,9.505116],[-13.712882,9.504508],[-13.713098,9.503549],[-13.713322,9.502619]]]},{"k":"n:Rue KA. 034","o":"Rue KA. 034","h":"residential","i":[382544391],"ow":0,"g":[[[-13.708402,9.510745],[-13.708488,9.510766],[-13.708789,9.510823],[-13.709177,9.510877],[-13.709662,9.510974],[-13.710047,9.511041]]]},{"k":"n:Rue KA. 036","o":"Rue KA. 036","h":"residential","i":[382547001],"ow":0,"g":[[[-13.705623,9.510217],[-13.706647,9.510415]]]},{"k":"n:Rue KA. 088","o":"Rue KA. 088","h":"residential","i":[489398758],"ow":0,"g":[[[-13.70394,9.513192],[-13.702845,9.51404],[-13.702486,9.514322],[-13.702406,9.514375],[-13.700561,9.515773],[-13.700452,9.51586],[-13.699838,9.516321],[-13.699239,9.51676],[-13.699167,9.516813],[-13.69853,9.517294],[-13.698428,9.517388],[-13.698085,9.517667],[-13.697566,9.518057],[-13.696839,9.518586],[-13.6963,9.518995],[-13.695934,9.519218],[-13.695182,9.519655],[-13.694617,9.519983]]]},{"k":"n:Avenue Docteur Rober Accar Nadjib","o":"Avenue Docteur Rober Accar Nadjib","h":"residential","i":[489398774],"ow":0,"g":[[[-13.705145,9.509418],[-13.705187,9.509279],[-13.705239,9.509051],[-13.705351,9.508573],[-13.705485,9.507854],[-13.705609,9.507115],[-13.705747,9.506349],[-13.705903,9.505553],[-13.706014,9.505132]]]},{"k":"n:7e Avenue","o":"7e Avenue","h":"residential","i":[549261646,605957607],"ow":0,"g":[[[-13.716134,9.51065],[-13.717149,9.510843]],[[-13.714821,9.51041],[-13.715795,9.510587],[-13.71605,9.510633],[-13.716134,9.51065]]]},{"k":"n:Boulevard de Boulbinet","o":"Boulevard de Boulbinet","h":"secondary","i":[571806434,571806435],"ow":0,"g":[[[-13.704448,9.508266],[-13.704545,9.508422],[-13.705145,9.509418],[-13.705203,9.509515],[-13.70529,9.509661],[-13.705623,9.510217],[-13.705914,9.510657],[-13.706039,9.510848],[-13.706359,9.511357]],[[-13.704279,9.507951],[-13.704343,9.508077],[-13.704448,9.508266]]]},{"k":"n:Avenue du 3 Avril 1984","o":"Avenue du 3 Avril 1984","h":"residential","i":[605957608],"ow":0,"g":[[[-13.714821,9.51041],[-13.714298,9.5103],[-13.713332,9.510098],[-13.711824,9.509782],[-13.710349,9.509521],[-13.709577,9.50937],[-13.708692,9.509198],[-13.70705,9.508891],[-13.706941,9.508871],[-13.705351,9.508573],[-13.704545,9.508422]]]},{"k":"n:Rue KA. 042","o":"Rue KA. 042","h":"unclassified","i":[605957609],"ow":0,"g":[[[-13.715296,9.513981],[-13.715005,9.513927],[-13.714169,9.513811]]]},{"k":"n:Avenue Hadja Rabiatou Serah Diallo","o":"Avenue Hadja Rabiatou Serah Diallo","h":"residential","i":[615565335],"ow":0,"g":[[[-13.710496,9.508759],[-13.710625,9.508101],[-13.710781,9.507311],[-13.710836,9.506927],[-13.710912,9.506533],[-13.711025,9.505988],[-13.711139,9.505462],[-13.711266,9.504862],[-13.711435,9.504219]]]},{"k":"n:Rond-Point de Nimba","o":"Rond-Point de Nimba","h":"primary","i":[636381976],"ow":1,"g":[[[-13.694583,9.520326],[-13.694621,9.520316],[-13.694654,9.520294],[-13.694679,9.520264],[-13.694695,9.520228],[-13.694698,9.520188],[-13.69469,9.52015],[-13.694671,9.520115],[-13.694642,9.520087],[-13.694608,9.52007],[-13.69457,9.520063],[-13.694532,9.520067],[-13.694497,9.520081],[-13.694467,9.520104],[-13.694448,9.520131],[-13.694435,9.520161],[-13.69443,9.520198],[-13.694436,9.520235],[-13.694453,9.520268],[-13.694477,9.520296],[-13.694509,9.520316],[-13.694546,9.520326],[-13.694583,9.520326]]]},{"k":"n:Avenue du 1er Mars 1960","o":"Avenue du 1er Mars 1960","h":"unclassified","i":[686125825],"ow":0,"g":[[[-13.713467,9.509327],[-13.713336,9.510078],[-13.713335,9.510084],[-13.713332,9.510098],[-13.713187,9.510611],[-13.713096,9.511041],[-13.713032,9.511374],[-13.712874,9.512181],[-13.712749,9.512801],[-13.712615,9.513479]]]},{"k":"n:Pénétrante du Port Autonome de Conakry","o":"Pénétrante du Port Autonome de Conakry","h":"tertiary","i":[1138157897,1138157898,1138157899],"ow":1,"g":[[[-13.715424,9.516648],[-13.715133,9.516669],[-13.715044,9.516686],[-13.713534,9.516986],[-13.713038,9.517042],[-13.712725,9.517052],[-13.712563,9.517009],[-13.712429,9.51695],[-13.712107,9.516686],[-13.711872,9.516435],[-13.71172,9.516327],[-13.711556,9.516254],[-13.711285,9.516207],[-13.71057,9.516102],[-13.710129,9.516058],[-13.709965,9.516083],[-13.709841,9.516109],[-13.709775,9.516156],[-13.709678,9.516308],[-13.709615,9.516376],[-13.709522,9.516453],[-13.709229,9.516602],[-13.708543,9.516912],[-13.707619,9.51733],[-13.706571,9.517878]],[[-13.690413,9.522674],[-13.690472,9.522643],[-13.690588,9.522588],[-13.690626,9.522577],[-13.690763,9.522552],[-13.69084,9.52256],[-13.691319,9.522822],[-13.692014,9.523206],[-13.692057,9.523225],[-13.692093,9.523234],[-13.692171,9.523253]],[[-13.698357,9.521086],[-13.699935,9.520527],[-13.701408,9.519987],[-13.702055,9.519748],[-13.702619,9.519501],[-13.70367,9.519075],[-13.703955,9.518983],[-13.704311,9.518865]],[[-13.704264,9.518785],[-13.703871,9.518913],[-13.703473,9.519056],[-13.703146,9.519192],[-13.702772,9.519356],[-13.702351,9.519546],[-13.702013,9.519688],[-13.70122,9.519982],[-13.69902,9.520785],[-13.69799,9.52114]],[[-13.692296,9.523185],[-13.692229,9.523192],[-13.692163,9.523186],[-13.692139,9.523181],[-13.692089,9.52316],[-13.691175,9.522661],[-13.690923,9.522518],[-13.690788,9.522442],[-13.690672,9.522372],[-13.690558,9.522308]]]},{"k":"n:AVENUE Dinah Salifou","o":"AVENUE Dinah Salifou","h":"unclassified","i":[1312733358],"ow":0,"g":[[[-13.711176,9.51317],[-13.711292,9.512553],[-13.711408,9.511935],[-13.71164,9.510756],[-13.711729,9.51028],[-13.711824,9.509782],[-13.711964,9.509077]]]},{"k":"n:Avenue Général Noumandjan Kéita","o":"Avenue Général Noumandjan Kéita","h":"secondary","i":[1315065250],"ow":0,"g":[[[-13.704448,9.508266],[-13.704253,9.509332],[-13.704211,9.509593],[-13.704182,9.509734],[-13.704166,9.509786],[-13.70413,9.509835],[-13.703875,9.510017],[-13.703729,9.510117],[-13.703579,9.510208],[-13.703269,9.510399]]]},{"k":"u:38664159","o":"","h":"residential","i":[38664159],"ow":0,"g":[[[-13.709604,9.504511],[-13.711266,9.504862],[-13.712751,9.505116],[-13.713542,9.505283],[-13.714237,9.505429]]]},{"k":"u:38664205","o":"","h":"residential","i":[38664205],"ow":0,"g":[[[-13.712348,9.50719],[-13.710836,9.506927],[-13.709957,9.506778],[-13.709554,9.506711],[-13.709211,9.506649]]]},{"k":"u:38698400","o":"","h":"residential","i":[38698400],"ow":0,"g":[[[-13.703016,9.511645],[-13.702184,9.511482],[-13.701396,9.511331]]]},{"k":"u:38698407","o":"","h":"residential","i":[38698407],"ow":0,"g":[[[-13.701585,9.514239],[-13.701754,9.513547],[-13.70191,9.512797],[-13.702051,9.512113],[-13.702184,9.511482],[-13.702312,9.510863],[-13.70234,9.510727]]]},{"k":"u:38698453","o":"","h":"residential","i":[38698453],"ow":0,"g":[[[-13.712059,9.516216],[-13.71234,9.514826]]]},{"k":"u:38698455","o":"","h":"residential","i":[38698455],"ow":0,"g":[[[-13.710592,9.515918],[-13.710845,9.514546]]]},{"k":"u:38698544","o":"","h":"residential","i":[38698544],"ow":0,"g":[[[-13.70565,9.515934],[-13.703957,9.51561],[-13.702279,9.515289],[-13.701674,9.515173]]]},{"k":"u:38698552","o":"","h":"residential","i":[38698552],"ow":0,"g":[[[-13.70362,9.517374],[-13.701942,9.517054],[-13.700368,9.516776],[-13.70021,9.516772],[-13.700046,9.516734],[-13.699729,9.516645]]]},{"k":"u:38698553","o":"","h":"residential","i":[38698553],"ow":0,"g":[[[-13.705739,9.51547],[-13.704891,9.515314],[-13.704038,9.51514]]]},{"k":"u:38698560","o":"","h":"residential","i":[38698560],"ow":0,"g":[[[-13.699266,9.513774],[-13.699146,9.514388],[-13.699044,9.514895],[-13.698844,9.515908]]]},{"k":"u:38698561","o":"","h":"residential","i":[38698561],"ow":0,"g":[[[-13.699044,9.514895],[-13.699629,9.515039]]]},{"k":"u:38846681","o":"","h":"primary","i":[38846681],"ow":1,"g":[[[-13.686581,9.524388],[-13.686951,9.524527]]]},{"k":"u:38893882","o":"","h":"residential","i":[38893882],"ow":0,"g":[[[-13.701786,9.517926],[-13.701661,9.518601],[-13.701641,9.518754]]]},{"k":"u:38895173","o":"","h":"residential","i":[38895173],"ow":0,"g":[[[-13.718254,9.505112],[-13.717137,9.504884]]]},{"k":"u:174022129","o":"","h":"secondary","i":[174022129],"ow":1,"g":[[[-13.686288,9.524121],[-13.686167,9.524137],[-13.686082,9.524149],[-13.686028,9.524162],[-13.685972,9.524185],[-13.685922,9.524208]]]},{"k":"u:217952237","o":"","h":"residential","i":[217952237],"ow":0,"g":[[[-13.697861,9.516508],[-13.697315,9.51555]]]},{"k":"u:217967228","o":"","h":"residential","i":[217967228],"ow":0,"g":[[[-13.719023,9.508487],[-13.718984,9.508479],[-13.718306,9.508341],[-13.717645,9.508206]]]},{"k":"u:269867009","o":"","h":"residential","i":[269867009],"ow":0,"g":[[[-13.699281,9.516978],[-13.699729,9.516645],[-13.700131,9.516333],[-13.700515,9.516056],[-13.700708,9.515906],[-13.701674,9.515173],[-13.702434,9.51458],[-13.702612,9.514411],[-13.703366,9.513855],[-13.704201,9.513243]]]},{"k":"u:269867015","o":"","h":"residential","i":[269867015],"ow":0,"g":[[[-13.704261,9.514004],[-13.703366,9.513855]]]},{"k":"u:269867017","o":"","h":"residential","i":[269867017],"ow":0,"g":[[[-13.698784,9.516217],[-13.69853,9.517294]]]},{"k":"u:269867023","o":"","h":"residential","i":[269867023],"ow":0,"g":[[[-13.699608,9.517519],[-13.699281,9.516978],[-13.699181,9.516834],[-13.699167,9.516813],[-13.698784,9.516217],[-13.698658,9.516022]]]},{"k":"u:270579425","o":"","h":"residential","i":[270579425],"ow":0,"g":[[[-13.698229,9.514215],[-13.698604,9.514286],[-13.698643,9.514293],[-13.698861,9.514337],[-13.699146,9.514388],[-13.699742,9.514501],[-13.700772,9.514695]]]},{"k":"u:291395356","o":"","h":"primary","i":[291395356],"ow":1,"g":[[[-13.686951,9.524527],[-13.686807,9.524412],[-13.686751,9.524354],[-13.68673,9.524322],[-13.686707,9.524277],[-13.686675,9.524217]]]},{"k":"u:291395358","o":"","h":"primary","i":[291395358],"ow":0,"g":[[[-13.686951,9.524527],[-13.687291,9.524713],[-13.687496,9.524824],[-13.687627,9.524902]]]},{"k":"u:291504351","o":"","h":"residential","i":[291504351],"ow":0,"g":[[[-13.713187,9.510611],[-13.713072,9.510601],[-13.712564,9.510479],[-13.71206,9.51035],[-13.711823,9.510306],[-13.711729,9.51028]]]},{"k":"u:338615025","o":"","h":"residential","i":[338615025],"ow":0,"g":[[[-13.698229,9.514215],[-13.698287,9.513971],[-13.698296,9.513956],[-13.698317,9.513948],[-13.698647,9.513987]]]},{"k":"u:364654187","o":"","h":"residential","i":[364654187],"ow":0,"g":[[[-13.71779,9.507514],[-13.719173,9.507751]]]},{"k":"u:376491013","o":"","h":"residential","i":[376491013],"ow":1,"g":[[[-13.694206,9.518741],[-13.694048,9.518756],[-13.693946,9.518746],[-13.693856,9.518701],[-13.693757,9.518589]]]},{"k":"u:376491014","o":"","h":"residential","i":[376491014],"ow":0,"g":[[[-13.693757,9.518589],[-13.693861,9.518797],[-13.693914,9.518909],[-13.693966,9.519019],[-13.694085,9.519247]]]},{"k":"u:441776076","o":"","h":"residential","i":[441776076],"ow":0,"g":[[[-13.693757,9.518589],[-13.693521,9.51826],[-13.693377,9.518125]]]},{"k":"u:448572357","o":"","h":"residential","i":[448572357,499655170],"ow":1,"g":[[[-13.688982,9.524785],[-13.689278,9.524319],[-13.69051,9.522725],[-13.690547,9.52266],[-13.690588,9.522588]],[[-13.690588,9.522588],[-13.690617,9.522504],[-13.690672,9.522372]]]},{"k":"u:550013247","o":"","h":"unclassified","i":[550013247],"ow":0,"g":[[[-13.704641,9.5171],[-13.704589,9.517041],[-13.70444,9.516972]]]},{"k":"u:550013248","o":"","h":"residential","i":[550013248],"ow":0,"g":[[[-13.703554,9.51771],[-13.703734,9.517724],[-13.703902,9.517676],[-13.704641,9.5171],[-13.704756,9.517053],[-13.704845,9.51706],[-13.705077,9.517325]]]},{"k":"u:550013254","o":"","h":"residential","i":[550013254,550013255],"ow":0,"g":[[[-13.702106,9.518317],[-13.702898,9.518473],[-13.702821,9.518738],[-13.702792,9.518734]],[[-13.702792,9.518734],[-13.702051,9.518584],[-13.702106,9.518317],[-13.702171,9.518002]]]},{"k":"u:551360786","o":"","h":"residential","i":[551360786],"ow":1,"g":[[[-13.694206,9.518741],[-13.693914,9.518909]]]},{"k":"u:636060853","o":"","h":"residential","i":[636060853,963538972],"ow":0,"g":[[[-13.696286,9.517113],[-13.695834,9.517398]],[[-13.695435,9.517644],[-13.695834,9.517398]]]},{"k":"u:690223569","o":"","h":"primary","i":[690223569],"ow":1,"g":[[[-13.687627,9.524902],[-13.687681,9.524953],[-13.687716,9.52499]],[[-13.687875,9.525168],[-13.6879,9.525196],[-13.687946,9.525253]]]},{"k":"u:690223571","o":"","h":"primary","i":[690223571],"ow":1,"g":[[[-13.688005,9.525216],[-13.68793,9.52513],[-13.687862,9.525063],[-13.687815,9.52502],[-13.687765,9.524981],[-13.687734,9.524956],[-13.687698,9.524932],[-13.687627,9.524902]]]},{"k":"u:827899928","o":"","h":"residential","i":[827899928],"ow":0,"g":[[[-13.703763,9.516431],[-13.704726,9.516619]]]},{"k":"u:914338675","o":"","h":"residential","i":[914338675],"ow":0,"g":[[[-13.694895,9.520294],[-13.694843,9.520345],[-13.694758,9.520373],[-13.694694,9.520472],[-13.694011,9.521855],[-13.693803,9.522117],[-13.693572,9.522324]]]},{"k":"u:919187263","o":"","h":"residential","i":[919187263],"ow":0,"g":[[[-13.697769,9.514069],[-13.698229,9.514215]]]},{"k":"u:963538973","o":"","h":"residential","i":[963538973],"ow":0,"g":[[[-13.695994,9.516665],[-13.696286,9.517113],[-13.696451,9.517365]]]},{"k":"u:1107646371","o":"","h":"residential","i":[1107646371],"ow":0,"g":[[[-13.706577,9.510753],[-13.706177,9.510695],[-13.705914,9.510657]]]},{"k":"u:1138157900","o":"","h":"tertiary","i":[1138157900],"ow":1,"g":[[[-13.704311,9.518865],[-13.704705,9.518759],[-13.704974,9.518674],[-13.705193,9.518592],[-13.705447,9.518496],[-13.70564,9.518403],[-13.706024,9.518194]]]},{"k":"u:1138157901","o":"","h":"tertiary","i":[1138157901],"ow":1,"g":[[[-13.706571,9.517878],[-13.706221,9.518014],[-13.705393,9.518338],[-13.705305,9.518374],[-13.704888,9.518544],[-13.704264,9.518785]]]},{"k":"u:1138157908","o":"","h":"tertiary","i":[1138157908],"ow":1,"g":[[[-13.706221,9.518014],[-13.705435,9.518399],[-13.705331,9.518441],[-13.704924,9.518606],[-13.704264,9.518785]]]},{"k":"u:1138157909","o":"","h":"tertiary","i":[1138157909],"ow":1,"g":[[[-13.704311,9.518865],[-13.704633,9.518819],[-13.705001,9.518732],[-13.705215,9.518652],[-13.705474,9.518554],[-13.705704,9.518404],[-13.706024,9.518194],[-13.706571,9.517878]]]},{"k":"u:1201571645","o":"","h":"residential","i":[1201571645],"ow":0,"g":[[[-13.697962,9.515341],[-13.697561,9.515238]]]},{"k":"u:1201571646","o":"","h":"residential","i":[1201571646],"ow":0,"g":[[[-13.69787,9.51573],[-13.697962,9.515341],[-13.698229,9.514215]]]},{"k":"u:1201571647","o":"","h":"residential","i":[1201571647],"ow":0,"g":[[[-13.698643,9.514293],[-13.698515,9.515063],[-13.698524,9.515084],[-13.698546,9.515095],[-13.6987,9.515109],[-13.698717,9.515125],[-13.698723,9.515146],[-13.698618,9.515574]]]},{"k":"u:1317168767","o":"","h":"unclassified","i":[1317168767],"ow":0,"g":[[[-13.703269,9.510399],[-13.702887,9.510529],[-13.70234,9.510727],[-13.701444,9.511063],[-13.700736,9.511318],[-13.700513,9.511396],[-13.700213,9.511484],[-13.69986,9.511574],[-13.699521,9.51161],[-13.699077,9.511622],[-13.698601,9.511624],[-13.698055,9.511627],[-13.69763,9.511626],[-13.697371,9.511652],[-13.697069,9.511702],[-13.696924,9.511751],[-13.696784,9.511831],[-13.696698,9.511915],[-13.696649,9.512013],[-13.696652,9.512114],[-13.696696,9.512222],[-13.696806,9.512351],[-13.69703,9.51259],[-13.697514,9.513134],[-13.697666,9.513319],[-13.697749,9.513465],[-13.697789,9.513541]]]},{"k":"u:1382059503","o":"","h":"residential","i":[1382059503],"ow":0,"g":[[[-13.703147,9.511014],[-13.702312,9.510863]]]},{"k":"u:1384107317","o":"","h":"residential","i":[1384107317],"ow":0,"g":[[[-13.718316,9.504777],[-13.718061,9.504697],[-13.717903,9.504704],[-13.717693,9.504744]]]},{"k":"u:1384107318","o":"","h":"residential","i":[1384107318],"ow":0,"g":[[[-13.718254,9.505112],[-13.718316,9.504777],[-13.71836,9.50454]]]},{"k":"u:1462517077","o":"","h":"residential","i":[1462517077],"ow":0,"g":[[[-13.713637,9.504856],[-13.713542,9.505283]]]},{"k":"u:1463606917","o":"","h":"tertiary","i":[1463606917,1463606920],"ow":1,"g":[[[-13.715312,9.514039],[-13.715332,9.514062],[-13.715359,9.514077],[-13.71539,9.514083],[-13.71542,9.51408]],[[-13.71542,9.51408],[-13.715449,9.514068],[-13.715471,9.514047],[-13.715487,9.514021],[-13.715493,9.513991],[-13.71549,9.51396],[-13.715477,9.513933],[-13.715456,9.51391],[-13.715429,9.513895],[-13.715399,9.513889],[-13.715368,9.513892],[-13.71534,9.513905],[-13.715317,9.513925],[-13.715302,9.513951],[-13.715296,9.513981],[-13.715299,9.514012],[-13.715312,9.514039]]]},{"k":"u:1517534782","o":"","h":"primary","i":[1517534782,1517534783],"ow":1,"g":[[[-13.710448,9.508936],[-13.710491,9.50891],[-13.710529,9.508863],[-13.710545,9.508824],[-13.710539,9.508803],[-13.710522,9.508777],[-13.710496,9.508759]],[[-13.710496,9.508759],[-13.710466,9.508751],[-13.710435,9.508755],[-13.710407,9.508769],[-13.710372,9.508799],[-13.710343,9.508847],[-13.710342,9.508874],[-13.710354,9.508907],[-13.710368,9.508924],[-13.710387,9.50894],[-13.710425,9.508944],[-13.710448,9.508936]]]}];
+let saved=JSON.parse(JSON.stringify({over:REF.over,qcodes:REF.qcodes,start:REF.start,dir:REF.dir,qdel:REF.qdel||{},extra:REF.extra||[],renameAll:REF.renameAll,frozenAt:REF.frozenAt}));
+try{const s=JSON.parse(localStorage.getItem(STORE)||'null');if(s&&s.over)saved=s}catch(e){}
+saved.extra=saved.extra||[];
+for(const k of['qcodes','start','dir','qdel'])saved[k]=saved[k]||{};
+const BASE=P.length;
+const syncP=()=>{P.length=BASE;P.push(...saved.extra);byId=Object.fromEntries(P.map(p=>[p.id,p]))};
+syncP();
+const persist=()=>{try{localStorage.setItem(STORE,JSON.stringify(saved))}catch(e){}};
+let streets=[];      /* groupes de segments */
+let selected=null;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+/* ---------- carte ---------- */
+const map=L.map('map',{zoomControl:true,zoomSnap:0.5}).setView([9.512,-13.712],15);
+for(const[n,z]of[['bati',360],['casing',380],['voies',400],['noms',430]]){map.createPane(n);map.getPane(n).style.zIndex=z}
+map.getPane('noms').style.pointerEvents='none';
+const rBati=L.canvas({pane:'bati'}),rCasing=L.svg({pane:'casing'}),rVoies=L.svg({pane:'voies'}),rNoms=L.svg({pane:'noms',padding:0.6});
+const dark=()=>matchMedia('(prefers-color-scheme: dark)').matches&&document.documentElement.dataset.theme!=='light'||document.documentElement.dataset.theme==='dark';
+const ESRI='https://server.arcgisonline.com/ArcGIS/rest/services/';
+const bases={
+  'Plan':L.tileLayer(ESRI+'Canvas/'+(dark()?'World_Dark_Gray_Base':'World_Light_Gray_Base')+'/MapServer/tile/{z}/{y}/{x}',{maxZoom:20,maxNativeZoom:16,attribution:'Fond &copy; Esri'}),
+  'Satellite':L.tileLayer(ESRI+'World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:20,maxNativeZoom:18,attribution:'Images &copy; Esri, Maxar'})
+};
+let baseName='Plan',renderMode='plan',gridShown=true,circShown=false,limShown=true,tramShown=false;try{tramShown=localStorage.getItem(STORE+'-tram-on')==='1'}catch(e){}try{limShown=localStorage.getItem(STORE+'-lim')!=='0'}catch(e){}try{circShown=localStorage.getItem(STORE+'-circ')==='1'}catch(e){}try{gridShown=localStorage.getItem(STORE+'-grille')!=='0'}catch(e){}
+try{const b=localStorage.getItem(STORE+'-fond2');if(b&&bases[b])baseName=b;const r=localStorage.getItem(STORE+'-rendu');if(r==='plan'||r==='suivi')renderMode=r}catch(e){}
+bases[baseName].addTo(map);
+L.control.layers(bases,null,{position:'topright',collapsed:false}).addTo(map);
+const layer=L.layerGroup().addTo(map);
+const extraLayer=L.layerGroup();
+let boundary=null;
+function applyBase(){
+  map.getContainer().classList.toggle('paper',baseName==='Plan'&&!dark());
+  if(baseName==='Plan')extraLayer.addTo(map);else map.removeLayer(extraLayer);
+}
+map.on('baselayerchange',e=>{baseName=e.name;try{localStorage.setItem(STORE+'-fond2',e.name)}catch(_){}applyBase()});
+/* choix du rendu : plan de ville (style plan de Paris) ou couleurs de suivi des noms */
+const Rendu=L.Control.extend({options:{position:'topright'},onAdd(){
+  const d=L.DomUtil.create('div','rendu');
+  d.innerHTML='<b>Rendu</b><label><input type="radio" name="rendu" value="plan"> Plan de ville</label><label><input type="radio" name="rendu" value="suivi"> Suivi des noms</label><label><input type="checkbox" id="gridOn"> Quadrillage</label><label><input type="checkbox" id="circOn"> Circulation</label><label><input type="checkbox" id="limOn"> Limites des quartiers</label><label><input type="checkbox" id="tramOn"> Projet de tramway</label>';
+  d.querySelector(`input[value="${renderMode}"]`).checked=true;
+  L.DomEvent.disableClickPropagation(d);
+  d.querySelector('#gridOn').checked=gridShown;d.querySelector('#limOn').checked=limShown;d.querySelector('#tramOn').checked=tramShown;d.querySelector('#circOn').checked=circShown;
+  d.addEventListener('change',e=>{
+    if(e.target.id==='tramOn'){tramShown=e.target.checked;try{localStorage.setItem(STORE+'-tram-on',tramShown?'1':'0')}catch(_){}showTram(true);return}
+    if(e.target.id==='limOn'){limShown=e.target.checked;try{localStorage.setItem(STORE+'-lim',limShown?'1':'0')}catch(_){}drawLimits();return}
+    if(e.target.id==='circOn'){circShown=e.target.checked;try{localStorage.setItem(STORE+'-circ',circShown?'1':'0')}catch(_){}drawCirc();return}
+    if(e.target.id==='gridOn'){gridShown=e.target.checked;try{localStorage.setItem(STORE+'-grille',gridShown?'1':'0')}catch(_){}showGrid();return}
+    renderMode=e.target.value;try{localStorage.setItem(STORE+'-rendu',renderMode)}catch(_){}draw()});
+  return d}});
+new Rendu().addTo(map);
+const Chip=L.Control.extend({options:{position:'bottomleft'},onAdd(){const d=L.DomUtil.create('div','chipmap');d.hidden=true;return d}});
+const chip=new Chip().addTo(map);
+const chipText=t=>{const d=chip.getContainer();d.textContent=t||'';d.hidden=!t};
+applyBase();
+
+/* ---------- utilitaires géo ---------- */
+const R=6371000,rad=d=>d*Math.PI/180;
+function dist(a,b){const dLa=rad(b.lat-a.lat),dLo=rad(b.lon-a.lon);const h=Math.sin(dLa/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLo/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
+const lenOf=g=>g.reduce((s,p,i)=>i?s+dist(g[i-1],p):0,0);
+function midpoint(g){const L0=lenOf(g)/2;let acc=0;for(let i=1;i<g.length;i++){const d=dist(g[i-1],g[i]);if(acc+d>=L0){const t=d?(L0-acc)/d:0;return[g[i-1].lat+(g[i].lat-g[i-1].lat)*t,g[i-1].lon+(g[i].lon-g[i-1].lon)*t]}acc+=d}return[g[0].lat,g[0].lon]}
+const MAJOR={trunk:1,primary:1,secondary:1};
+const RANK={trunk:0,primary:0,secondary:1,tertiary:2,residential:3,unclassified:3,living_street:4,pedestrian:4};
+
+/* ---------- un nom existant est-il un vrai nom ? (pas un code ni un numéro) ---------- */
+const isRealName=n=>!!n&&!/\d/.test(n)&&n.trim().length>3;
+
+/* ---------- chargement OpenStreetMap ---------- */
+const HW='^(trunk|primary|secondary|tertiary|residential|unclassified|living_street|pedestrian)$';
+const Q_AREA=`[out:json][timeout:90];
+area["name"="Kaloum"]["boundary"="administrative"]->.k;
+rel["name"="Kaloum"]["boundary"="administrative"]->.r;
+way(area.k)["highway"~"${HW}"]->.w;
+.w out geom; .r out geom;`;
+const Q_BBOX=`[out:json][timeout:90];way["highway"~"${HW}"](9.497,-13.730,9.530,-13.696);out geom;`;
+const ENDPOINTS=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
+async function overpass(q){
+  let last;
+  for(const u of ENDPOINTS){
+    const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),60000);
+    try{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'data='+encodeURIComponent(q),signal:ctl.signal});
+      if(!r.ok)throw new Error('serveur occupé (HTTP '+r.status+')');return await r.json()}catch(e){last=e.name==='AbortError'?new Error('le serveur a mis trop de temps à répondre'):e}finally{clearTimeout(t)}
+  }
+  throw last;
+}
+async function load(){
+  status('Chargement des rues de Kaloum…','Les rues réelles sont récupérées depuis OpenStreetMap. Cela prend 5 à 30 secondes.');
+  try{
+    let data=null;
+    try{const c=localStorage.getItem(STORE+'-osm');if(c)data=JSON.parse(c)}catch(e){}
+    let wantOSM=false;try{wantOSM=!!localStorage.getItem(STORE+'-oldkeys')}catch(e){}
+    if(!data&&!wantOSM){
+      /* premier chargement : les rues sont dans la page, pas besoin d'attendre OpenStreetMap */
+      streets=DATA.map(d=>{const segs=d.g.map(l=>l.map(([lon,lat])=>({lat,lon})));return{key:d.k,oldName:d.o,highway:d.h,segs,ow:segs.map(()=>d.ow),ids:d.i,len:segs.reduce((a,g)=>a+lenOf(g),0)}});
+      streets.forEach(chainOf);computeCirculation();
+      makeGrid();streets.forEach(s=>{s.cells=cellsOf(s);s.cps=cpsOf(s)});
+      setQuartiers();
+      map.fitBounds(L.latLngBounds(streets.flatMap(s=>s.segs.flat()).map(p=>[p.lat,p.lon])),{padding:[20,20]});
+      assign();hideStatus();loadExtra();openHash();
+      if(tramShown)showTram(false);
+      return;
+    }
+    if(!data){
+      data=await overpass(Q_AREA);
+      if(!data.elements.some(e=>e.type==='way'))data=await overpass(Q_BBOX);
+      try{localStorage.setItem(STORE+'-osm',JSON.stringify(data))}catch(e){}
+    }
+    build(data);
+    hideStatus();
+    loadExtra();
+    openHash();
+    setTimeout(refreshReport,1500);
+    if(tramShown)showTram(false);
+  }catch(e){
+    let bk=null;try{bk=localStorage.getItem(STORE+'-osm-backup')}catch(_){}
+    if(bk){
+      try{localStorage.setItem(STORE+'-osm',bk);localStorage.removeItem(STORE+'-osm-backup');localStorage.removeItem(STORE+'-oldkeys')}catch(_){}
+      build(JSON.parse(bk));hideStatus();loadExtra();openHash();
+      setTimeout(()=>chipText('OpenStreetMap ne répond pas : les rues précédentes ont été restaurées. Réessaie plus tard.'),1500);
+      return;
+    }
+    try{localStorage.removeItem(STORE+'-oldkeys')}catch(_){}
+    if(confirm('OpenStreetMap ne répond pas. Revenir aux rues incluses dans la carte ?')){location.reload();return}
+    status('Impossible de charger les rues',"Vérifie ta connexion internet, puis réessaie. Ouvre ce fichier sur ton PC dans Chrome ou Edge (double-clic). Détail : "+esc(e.message||e),true);
+  }
+}
+function status(t,msg,retry){
+  const s=$('status');s.hidden=false;
+  s.innerHTML=`<div><h3>${esc(t)}</h3><p class="empty">${msg}</p>${retry?'<button class="btn primary" type="button" id="retry">Réessayer</button>':''}</div>`;
+  if(retry)$('retry').onclick=load;
+}
+const hideStatus=()=>{$('status').hidden=true};
+
+/* ---------- regroupement des segments en rues ---------- */
+function build(data){
+  const ways=data.elements.filter(e=>e.type==='way'&&e.geometry&&e.geometry.length>1);
+  const rel=data.elements.find(e=>e.type==='relation');
+  if(rel&&rel.members){
+    const lines=rel.members.filter(m=>m.role==='outer'&&m.geometry).map(m=>m.geometry.map(p=>[p.lat,p.lon]));
+    if(lines.length){boundary=L.polyline(lines,{color:css('--red'),weight:2,dashArray:'6 6',opacity:.7,interactive:false}).addTo(map)}
+  }
+  /* a) garder seulement la partie des rues à l'intérieur de Kaloum */
+  const edges=[];
+  if(rel&&rel.members)for(const m of rel.members)if(m.role==='outer'&&m.geometry)for(let i=1;i<m.geometry.length;i++)edges.push([m.geometry[i-1],m.geometry[i]]);
+  const inside=pt=>{let c=false;for(const[a,b]of edges){if((a.lat>pt.lat)!==(b.lat>pt.lat)){const x=a.lon+(pt.lat-a.lat)/(b.lat-a.lat)*(b.lon-a.lon);if(pt.lon<x)c=!c}}return c};
+  const units=[];
+  for(const w of ways){
+    if(!edges.length){units.push({id:w.id,tags:w.tags||{},geom:w.geometry});continue}
+    /* découpe précise : on coupe chaque tronçon là où il croise la limite */
+    let run=[];
+    const flush=()=>{if(run.length>1)units.push({id:w.id,tags:w.tags||{},geom:run});run=[]};
+    const g=w.geometry;
+    for(let i=1;i<g.length;i++){
+      const A=g[i-1],B=g[i];const ts=[0,1];
+      for(const[c,d]of edges){
+        const den=(B.lon-A.lon)*(d.lat-c.lat)-(B.lat-A.lat)*(d.lon-c.lon);if(!den)continue;
+        const t=((c.lon-A.lon)*(d.lat-c.lat)-(c.lat-A.lat)*(d.lon-c.lon))/den;
+        const u=((c.lon-A.lon)*(B.lat-A.lat)-(c.lat-A.lat)*(B.lon-A.lon))/den;
+        if(t>0&&t<1&&u>=0&&u<=1)ts.push(t);
+      }
+      ts.sort((x,y)=>x-y);
+      const at=t=>({lat:A.lat+(B.lat-A.lat)*t,lon:A.lon+(B.lon-A.lon)*t});
+      for(let k=1;k<ts.length;k++){
+        if(ts[k]-ts[k-1]<1e-9)continue;
+        if(inside(at((ts[k-1]+ts[k])/2))){
+          const P0=at(ts[k-1]),P1=at(ts[k]);
+          const last=run[run.length-1];
+          if(!last||Math.abs(last.lat-P0.lat)>1e-9||Math.abs(last.lon-P0.lon)>1e-9){flush();run.push(P0)}
+          run.push(P1);
+        }else flush();
+      }
+    }
+    flush();
+  }
+  /* b) rues avec un nom (ou un code) : tous leurs tronçons ensemble */
+  const groups=new Map();
+  const add=(key,nm,u)=>{
+    if(!groups.has(key))groups.set(key,{key,oldName:nm,highway:u.tags.highway,segs:[],ow:[],ids:[],len:0});
+    const g=groups.get(key);g.segs.push(u.geom);g.ow.push(owOf(u.tags));if(!g.ids.includes(u.id))g.ids.push(u.id);g.len+=lenOf(u.geom);
+    if(RANK[u.tags.highway]<RANK[g.highway])g.highway=u.tags.highway;
+  };
+  const unnamed=[];
+  for(const u of units){const nm=u.tags.name||u.tags.ref||'';if(nm)add('n:'+nm,nm,u);else unnamed.push(u)}
+  /* c) tronçons sans nom : on relie ceux qui se suivent tout droit (même rue coupée en morceaux) */
+  const nk=p=>p.lat.toFixed(6)+','+p.lon.toFixed(6);
+  const ends=new Map();
+  unnamed.forEach((u,i)=>{for(const[at,nx]of[[0,1],[u.geom.length-1,u.geom.length-2]]){const k=nk(u.geom[at]);if(!ends.has(k))ends.set(k,[]);ends.get(k).push({i,dir:Math.atan2(u.geom[nx].lat-u.geom[at].lat,u.geom[nx].lon-u.geom[at].lon)})}});
+  const par=unnamed.map((_,i)=>i);const find=i=>par[i]===i?i:(par[i]=find(par[i]));
+  for(const list of ends.values()){
+    if(list.length!==2)continue;
+    const[a,b]=list;if(a.i===b.i)continue;
+    if(unnamed[a.i].tags.highway!==unnamed[b.i].tags.highway)continue;
+    let d=Math.abs(a.dir-b.dir);if(d>Math.PI)d=2*Math.PI-d;
+    if(d>Math.PI*0.75)par[find(a.i)]=find(b.i);
+  }
+  const rootId=new Map();unnamed.forEach((u,i)=>{const r=find(i);rootId.set(r,Math.min(rootId.get(r)??Infinity,u.id))});
+  unnamed.forEach((u,i)=>add('u:'+rootId.get(find(i)),'',u));
+  streets=[...groups.values()].filter(g=>g.len>=25);
+  streets.forEach(chainOf);
+  computeCirculation();
+  makeGrid();streets.forEach(s=>{s.cells=cellsOf(s);s.cps=cpsOf(s)});
+  if(Object.keys(saved.qcodes).length&&!quartiers.length)setQuartiers();
+  const all=streets.flatMap(s=>s.segs.flat());
+  if(all.length){map.fitBounds(L.latLngBounds(all.map(p=>[p.lat,p.lon])),{padding:[20,20]})}
+  assign();
+}
+
+/* ---------- attribution des noms ---------- */
+function assign(){
+  const renameAll=saved.renameAll;
+  const used=new Set(Object.values(saved.over).filter(v=>v.pid).map(v=>v.pid));
+  const pool=P.filter(p=>!used.has(p.id));
+  for(const s of streets){s.mode=null;s.pid=null;s.custom=null}
+  /* 1. choix manuels */
+  for(const s of streets){const o=saved.over[s.key];if(o){if(o.pid&&byId[o.pid]){s.mode='named';s.pid=o.pid}else if(o.custom){s.mode='named';s.custom=o.custom}else if(o.keep&&s.oldName){s.mode='keep'}}}
+  /* 2. noms existants conservés */
+  for(const s of streets){if(!s.mode&&!renameAll&&isRealName(s.oldName))s.mode='keep'}
+  /* 3. proposition automatique : les voies les plus importantes d'abord */
+  const todo=streets.filter(s=>!s.mode).sort((a,b)=>(RANK[a.highway]-RANK[b.highway])||(b.len-a.len));
+  let i=0;
+  for(const s of todo){if(i<pool.length&&s.len>=50){s.mode='named';s.pid=pool[i++].id}else s.mode='todo'}
+  draw();list();counts();updFrozen();
+  if(selected){const s=streets.find(x=>x.key===selected);if(s)detail(s)}
+}
+const prefix=s=>MAJOR[s.highway]?'Avenue':'Rue';
+function label(s){
+  if(s.mode==='keep')return s.oldName;
+  if(s.mode==='named'){if(s.custom)return s.custom;return prefix(s)+' '+byId[s.pid].name}
+  return 'Rue à nommer';
+}
+const color=s=>s.mode==='named'?css('--street'):s.mode==='keep'?css('--street-keep'):css('--street-todo');
+
+/* ---------- dessin ---------- */
+const lines=new Map();let styled=[];let texts=[];
+const baseW=s=>MAJOR[s.highway]?9:s.highway==='tertiary'?7:5.5;
+const zf=()=>Math.min(3,Math.max(.45,Math.pow(2,(map.getZoom()-16)*.8)));
+function orient(g){
+  const a=g[0],b=g[g.length-1];
+  const horiz=Math.abs(b.lon-a.lon)>=Math.abs(b.lat-a.lat);
+  const rev=horiz?b.lon<a.lon:b.lat<a.lat;
+  return(rev?[...g].reverse():g).map(p=>[p.lat,p.lon]);
+}
+const SVGNS='http://www.w3.org/2000/svg';let pid=0;
+function draw(){
+  layer.clearLayers();lines.clear();styled=[];texts.forEach(t=>t.el.remove());texts=[];
+  const plan=renderMode==='plan';
+  const order=[...streets].sort((a,b)=>RANK[b.highway]-RANK[a.highway]||a.len-b.len);
+  for(const s of order){
+    const major=!!MAJOR[s.highway],w=baseW(s);
+    const ll=s.segs.map(g=>g.map(p=>[p.lat,p.lon]));
+    if(plan){
+      const c=L.polyline(ll,{renderer:rCasing,color:major?css('--plan-major-casing'):css('--plan-casing'),weight:w+2.4,lineCap:'round',lineJoin:'round',interactive:false}).addTo(layer);
+      styled.push([c,w+2.4]);
+    }
+    const pl=L.polyline(ll,{renderer:rVoies,color:plan?(major?css('--plan-major'):css('--plan-street')):color(s),weight:plan?w:Math.max(4,w-2),opacity:plan||s.mode!=='todo'?1:.6,dashArray:!plan&&s.mode==='todo'?'4 6':null,lineCap:'round',lineJoin:'round'});
+    pl.on('click',()=>select(s.key,false));
+    pl.bindTooltip(esc(label(s)),{sticky:true});
+    pl.addTo(layer);lines.set(s.key,pl);styled.push([pl,plan?w:Math.max(4,w-2)]);
+  }
+  if(selected&&lines.get(selected)){
+    const s=streets.find(x=>x.key===selected);
+    const h=L.polyline(lines.get(selected).getLatLngs(),{renderer:rVoies,color:css('--red'),weight:baseW(s)+3,opacity:.85,lineCap:'round',interactive:false}).addTo(layer);
+    styled.push([h,baseW(s)+3]);
+  }
+  /* noms écrits le long des rues, comme sur un plan de ville */
+  for(const s of streets){
+    if(s.mode==='todo')continue;
+    const longest=s.segs.reduce((a,b)=>lenOf(b)>lenOf(a)?b:a);
+    const ghost=L.polyline(orient(longest),{renderer:rNoms,stroke:false,fill:false,interactive:false}).addTo(layer);
+    const path=ghost._path;if(!path)continue;
+    const id='kp'+(++pid);path.setAttribute('id',id);
+    const t=document.createElementNS(SVGNS,'text');t.setAttribute('class','stl'+(MAJOR[s.highway]?' major':''));t.setAttribute('dy','0.35em');
+    const tp=document.createElementNS(SVGNS,'textPath');tp.setAttribute('href','#'+id);tp.setAttributeNS('http://www.w3.org/1999/xlink','xlink:href','#'+id);
+    tp.setAttribute('startOffset','50%');tp.setAttribute('text-anchor','middle');
+    t.appendChild(tp);path.parentNode.appendChild(t);
+    const full=label(s);
+    texts.push({el:t,tp,path,full,short:full.replace(/^Avenue /,'Av. ').replace(/^Boulevard /,'Bd ').replace(/^Rue /,'R. '),major:!!MAJOR[s.highway],key:s.key});
+  }
+  restyle();
+  if(circShown)drawCirc();
+}
+const mctx=document.createElement('canvas').getContext('2d');
+function textW(str,size,bold,ls){mctx.font=`${bold?700:600} ${size}px "Instrument Sans", system-ui, sans-serif`;return mctx.measureText(str).width+str.length*size*ls}
+function restyle(){
+  const f=zf();
+  for(const[l,w]of styled)l.setStyle({weight:w*f});
+  const z=map.getZoom();
+  for(const t of texts){
+    const show=t.key===selected||(t.major?z>=14.5:z>=16);
+    if(!show){t.el.style.display='none';continue}
+    const size=t.major?(z>=18?14:z>=17?13:z>=16?11.5:10):(z>=18?12.5:z>=17?11:9.5);
+    const ls=t.major?.06:0;
+    let L0=0;try{L0=t.path.getTotalLength()}catch(e){}
+    let txt=t.full;
+    if(textW(txt,size,t.major,ls)+12>L0)txt=t.short;
+    if(textW(txt,size,t.major,ls)+12>L0){t.el.style.display='none';continue}
+    t.el.style.display='';t.el.style.fontSize=size+'px';t.tp.textContent=txt;
+  }
+}
+map.on('zoomend moveend',()=>setTimeout(restyle,0));
+
+/* ---------- numérotation des maisons ----------
+   On suit le tracé réel de la rue, d'un bout à l'autre. Le départ est l'extrémité de gauche :
+   à l'ouest pour une rue plutôt horizontale, au sud pour une rue plutôt verticale.
+   Chaque tranche de 10 m reçoit un numéro impair à gauche et pair à droite (dans le sens des numéros croissants).
+   Une fois le plan figé, le point de départ de chaque rue est enregistré et ne bouge plus. */
+const CP='88000',STEP=10,mLat=111320,mLon=111320*Math.cos(9.51*Math.PI/180);
+const owOf=t=>t.oneway==='-1'?-1:(['yes','true','1'].includes(t.oneway)||t.junction==='roundabout'||t.junction==='circular')?1:0;
+const NK=p=>p.lat.toFixed(6)+','+p.lon.toFixed(6);
+const CN=['est','nord-est','nord','nord-ouest','ouest','sud-ouest','sud','sud-est'];
+const cIdx=(dx,dy)=>(Math.round(Math.atan2(dy,dx)/(Math.PI/4))+8)%8;
+const vers=(dx,dy)=>{const c=CN[cIdx(dx,dy)];return'vers '+(c[0]==='e'||c[0]==='o'?"l'":'le ')+c};
+function chainOf(s){
+  let a=Infinity,b=-Infinity,c=Infinity,d=-Infinity;
+  for(const g of s.segs)for(const p of g){a=Math.min(a,p.lon);b=Math.max(b,p.lon);c=Math.min(c,p.lat);d=Math.max(d,p.lat)}
+  const horiz=(b-a)*mLon>=(d-c)*mLat;
+  const adj=new Map(),put=(k,e)=>{if(!adj.has(k))adj.set(k,[]);adj.get(k).push(e)};
+  s.segs.forEach((g,i)=>{put(NK(g[0]),{i,rev:false,p:g[0]});put(NK(g[g.length-1]),{i,rev:true,p:g[g.length-1]})});
+  let cands=[...adj.values()].filter(l=>l.length===1);if(!cands.length)cands=[...adj.values()];
+  const fixed=saved.start[s.key];
+  const score=l=>fixed?Math.hypot((l[0].p.lat-fixed[0])*mLat,(l[0].p.lon-fixed[1])*mLon):(horiz?l[0].p.lon:l[0].p.lat);
+  cands.sort((x,y)=>score(x)-score(y));
+  const used=new Set();const chain=[];let cur=NK(cands[0][0].p),pdx=0,pdy=0;const segDir=s.segs.map(()=>0);const jumps=new Set();
+  const walk=()=>{for(;;){
+    const opts=(adj.get(cur)||[]).filter(e=>!used.has(e.i));if(!opts.length)break;
+    let best=opts[0];
+    if(opts.length>1&&(pdx||pdy)){let bs=-Infinity;for(const o of opts){const g=s.segs[o.i],A=o.rev?g[g.length-1]:g[0],B=o.rev?g[g.length-2]:g[1];const dx=(B.lon-A.lon)*mLon,dy=(B.lat-A.lat)*mLat,n=Math.hypot(dx,dy)||1;const sc=(dx*pdx+dy*pdy)/n;if(sc>bs){bs=sc;best=o}}}
+    used.add(best.i);segDir[best.i]=best.rev?-1:1;
+    const g=best.rev?[...s.segs[best.i]].reverse():s.segs[best.i];
+    chain.push(...(chain.length?g.slice(1):g));
+    const P=chain[chain.length-2],Q=chain[chain.length-1];pdx=(Q.lon-P.lon)*mLon;pdy=(Q.lat-P.lat)*mLat;const n=Math.hypot(pdx,pdy)||1;pdx/=n;pdy/=n;
+    cur=NK(Q);
+  }};
+  walk();
+  if(chain.length<2){chain.length=0;chain.push(...s.segs[0]);used.add(0);segDir[0]=1}
+  /* morceaux séparés de la même rue : on les ajoute à la suite (numérotation continue).
+     Les chaussées parallèles (à moins de 40 m) suivent la numérotation de la chaussée principale. */
+  const dPoly=(pl,p)=>{let b=Infinity;for(let i=1;i<pl.length;i++){const ax=pl[i-1].lon*mLon,ay=pl[i-1].lat*mLat,vx=pl[i].lon*mLon-ax,vy=pl[i].lat*mLat-ay,L2=vx*vx+vy*vy||1,px=p.lon*mLon,py=p.lat*mLat,t=Math.max(0,Math.min(1,((px-ax)*vx+(py-ay)*vy)/L2));b=Math.min(b,Math.hypot(px-ax-t*vx,py-ay-t*vy))}return b};
+  const parallel=new Set(s.segs.map((g,i)=>i).filter(i=>{const g=s.segs[i];return!used.has(i)&&dPoly(chain,g[Math.floor(g.length/2)])<=40}));
+  for(;;){
+    const rest=s.segs.map((g,i)=>i).filter(i=>!used.has(i)&&!parallel.has(i));if(!rest.length)break;
+    const E=chain[chain.length-1];let bi=-1,brev=false,bd=Infinity;
+    for(const i of rest){const g=s.segs[i],d0=dist(E,g[0]),d1=dist(E,g[g.length-1]);if(d0<bd){bd=d0;bi=i;brev=false}if(d1<bd){bd=d1;bi=i;brev=true}}
+    used.add(bi);segDir[bi]=brev?-1:1;
+    const g=brev?[...s.segs[bi]].reverse():s.segs[bi];
+    jumps.add(chain.length);chain.push(...g);
+    const P=chain[chain.length-2],Q=chain[chain.length-1];pdx=(Q.lon-P.lon)*mLon;pdy=(Q.lat-P.lat)*mLat;const n=Math.hypot(pdx,pdy)||1;pdx/=n;pdy/=n;
+    cur=NK(Q);walk();
+  }
+  s.jumps=jumps;
+  s.chain=chain;s.cum=[0];
+  for(let i=1;i<chain.length;i++)s.cum.push(s.cum[i-1]+dist(chain[i-1],chain[i]));
+  s.total=s.cum[s.cum.length-1];
+  s.maxNo=2*Math.floor(s.total/STEP)+2;
+  const S0=chain[0],E0=chain[chain.length-1],dx=(E0.lon-S0.lon)*mLon,dy=(E0.lat-S0.lat)*mLat;
+  s.vec=[dx,dy];
+  s.segDir=segDir.map((v,i)=>{if(v)return v;const g=s.segs[i],A=g[0],B=g[g.length-1];return Math.sign((B.lon-A.lon)*mLon*dx+(B.lat-A.lat)*mLat*dy)||1});
+  s.dirTxt=vers(dx,dy);s.fromTxt="depuis l'extrémité "+CN[cIdx(-dx,-dy)];
+}
+/* position sur le tracé : distance depuis le début, côté gauche ou droit */
+function refOn(s,lat,lon){
+  const px=lon*mLon,py=lat*mLat;let best=null;
+  for(let i=1;i<s.chain.length;i++){
+    if(s.jumps&&s.jumps.has(i))continue;
+    const A=s.chain[i-1],B=s.chain[i],ax=A.lon*mLon,ay=A.lat*mLat,vx=B.lon*mLon-ax,vy=B.lat*mLat-ay,L2=vx*vx+vy*vy;if(!L2)continue;
+    const t=Math.max(0,Math.min(1,((px-ax)*vx+(py-ay)*vy)/L2)),qx=ax+t*vx,qy=ay+t*vy,dd=Math.hypot(px-qx,py-qy);
+    if(!best||dd<best.dist)best={dist:dd,d:s.cum[i-1]+t*Math.sqrt(L2),left:vx*(py-ay)-vy*(px-ax)>0,q:{lon:qx/mLon,lat:qy/mLat}};
+  }
+  return best;
+}
+function pointAt(s,d){
+  let i=1;while(i<s.cum.length-1&&s.cum[i]<d)i++;
+  const A=s.chain[i-1],B=s.chain[i],seg=(s.cum[i]-s.cum[i-1])||1,t=Math.max(0,Math.min(1,(d-s.cum[i-1])/seg));
+  const ax=A.lon*mLon,ay=A.lat*mLat,vx=B.lon*mLon-ax,vy=B.lat*mLat-ay,n=Math.hypot(vx,vy)||1;
+  return{x:ax+vx*t,y:ay+vy*t,ux:vx/n,uy:vy/n,i,jump:!!(s.jumps&&s.jumps.has(i))};
+}
+const houseNo=(dd,left)=>2*Math.floor(Math.max(0,dd)/STEP)+(left?1:2);
+function addressAt(ll){
+  const px=ll.lng*mLon,py=ll.lat*mLat;let best=null;
+  for(const s of streets)for(const g of s.segs)for(let i=1;i<g.length;i++){
+    const ax=g[i-1].lon*mLon,ay=g[i-1].lat*mLat,vx=g[i].lon*mLon-ax,vy=g[i].lat*mLat-ay,L2=vx*vx+vy*vy;if(!L2)continue;
+    const t=Math.max(0,Math.min(1,((px-ax)*vx+(py-ay)*vy)/L2)),dd=Math.hypot(px-ax-t*vx,py-ay-t*vy);
+    if(!best||dd<best.dist)best={s,dist:dd};
+  }
+  if(!best||best.dist>60)return null;
+  const r=refOn(best.s,ll.lat,ll.lng);
+  return{s:best.s,dist:best.dist,left:r.left,q:r.q,no:houseNo(r.d,r.left)};
+}
+const online=()=>/^https?:$/.test(location.protocol);
+const shareUrl=(lat,lon)=>location.origin+location.pathname+'#'+lat.toFixed(6)+','+lon.toFixed(6);
+let hereMarker=null;
+function showAddress(latlng,a,note){
+  if(!a){L.popup().setLatLng(latlng).setContent('<div class="adr">Aucune rue à moins de 60 m. Clique plus près d\'une rue.</div>').openOn(map);return}
+  const nom=a.s.mode==='todo'?'Rue à nommer':label(a.s);
+  const q=quartierAt(a.q.lat,a.q.lon),cp=q?q.cp:CP,cell=cellAt(a.q.lat,a.q.lon);
+  const txt=`${a.no}, ${nom}, ${cp} Kaloum, Conakry`;
+  const url=shareUrl(latlng.lat,latlng.lng);
+  const div=document.createElement('div');div.className='adr';
+  div.innerHTML=`${note?`<small style="margin:0 0 4px">${esc(note)}</small>`:''}<b>${a.no}, ${esc(nom)}</b>${cp} Kaloum, Conakry<small>${q?'Quartier '+esc(q.name)+' · ':''}Carreau ${cell} · Côté ${a.left?'gauche (impair)':'droit (pair)'} · numéros croissants ${a.s.dirTxt}</small>
+    <div class="row"><button class="btn primary" type="button" data-a="go">Y aller</button><button class="btn" type="button" data-a="from">Partir d'ici</button></div>
+    <div class="row"><button class="btn" type="button" data-a="copy">Copier l'adresse</button><button class="btn" type="button" data-a="link">Copier le lien</button><a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(txt+(online()?' '+url:''))}">WhatsApp</a></div>
+    ${online()?'':'<small>Le lien de partage marchera une fois la carte mise en ligne.</small>'}`;
+  const copy=(btn,str)=>navigator.clipboard.writeText(str).then(()=>btn.textContent='Copié').catch(()=>btn.textContent=str);
+  div.querySelector('[data-a="copy"]').onclick=ev=>copy(ev.target,txt);
+  div.querySelector('[data-a="link"]').onclick=ev=>copy(ev.target,url);
+  div.querySelector('[data-a="go"]').onclick=()=>{map.closePopup();routeTo(latlng,txt)};
+  div.querySelector('[data-a="from"]').onclick=()=>{map.closePopup();setStart(latlng,txt)};
+  L.popup().setLatLng(latlng).setContent(div).openOn(map);
+}
+map.on('click',e=>{if(picking==='quartier'){picking=false;$('pickHint').hidden=true;addQuartier(e.latlng);return}if(picking){picking=false;$('pickHint').hidden=true;const a=addressAt(e.latlng);setStart(e.latlng,a?addrText(a):'Point choisi sur la carte');return}showAddress(e.latlng,addressAt(e.latlng))});
+
+/* ---------- itinéraire : retrouver une adresse et s'y rendre ----------
+   Le réseau est construit à partir des vraies rues. En voiture, on respecte les sens uniques :
+   ceux qui existent déjà, ou ceux du plan de circulation proposé si la case est cochée.
+   À pied, toutes les rues se parcourent dans les deux sens. */
+const addrText=a=>{const q=quartierAt(a.q.lat,a.q.lon);return`${a.no}, ${a.s.mode==='todo'?'Rue à nommer':label(a.s)}, ${q?q.cp:CP} Kaloum`};
+let picking=false;
+const RT={from:null,fromTxt:'',to:null,toTxt:'',mode:'car',plan:false,res:null};
+map.createPane('trajet');map.getPane('trajet').style.zIndex=440;map.getPane('trajet').style.pointerEvents='none';
+map.createPane('vehicule');map.getPane('vehicule').style.zIndex=660;map.getPane('vehicule').style.pointerEvents='none';
+const rTrajet=L.svg({pane:'trajet'});
+const rtLayer=L.layerGroup().addTo(map);
+/* voiture vue du dessus, orange vif, tournée vers l'est (0°) */
+const CAR_SVG='<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="30" height="18" rx="6" fill="#ff7a00" stroke="#1d1d1d" stroke-width="2"/><rect x="21" y="13.5" width="7" height="13" rx="2" fill="#1d2b3a"/><rect x="9" y="14" width="5" height="12" rx="2" fill="#1d2b3a"/><rect x="15" y="14" width="5" height="12" rx="1.5" fill="#ffb15c"/><rect x="32" y="12.5" width="2.5" height="4" rx="1" fill="#fff6c2"/><rect x="32" y="23.5" width="2.5" height="4" rx="1" fill="#fff6c2"/><rect x="5.5" y="12.5" width="2" height="4" rx="1" fill="#d11"/><rect x="5.5" y="23.5" width="2" height="4" rx="1" fill="#d11"/></svg>';
+function vehIcon(){return RT.mode==='walk'?L.divIcon({className:'vehwrap',html:'<span class="walker" role="img" aria-label="Piéton">🚶</span>',iconSize:null}):L.divIcon({className:'vehwrap',html:'<span class="veh" role="img" aria-label="Voiture">'+CAR_SVG+'</span>',iconSize:null})}
+let panning=false;map.on('movestart',()=>{panning=true});map.on('moveend',()=>{panning=false});
+/* on ne déplace la carte que quand le véhicule approche du bord : pas de tremblement */
+function follow(ll){
+  if(panning)return;
+  const pt=map.latLngToContainerPoint(ll),sz=map.getSize();
+  if(pt.x<sz.x*.25||pt.x>sz.x*.75||pt.y<sz.y*.25||pt.y>sz.y*.75)map.panTo(ll,{animate:true,duration:.8,easeLinearity:.5});
+}
+function buildGraph(walk,plan,loose){
+  const adj=new Map(),pts=new Map(),has=new Set();
+  const add=(a,b,s)=>{const ka=NK(a),kb=NK(b);if(ka===kb)return;pts.set(ka,a);pts.set(kb,b);if(!adj.has(ka))adj.set(ka,[]);
+    const len=dist(a,b),v=walk?1.35:(MAJOR[s.highway]?8.3:s.highway==='tertiary'?6.9:5.5);adj.get(ka).push({to:kb,len,t:len/v,s});has.add(ka+'>'+kb)};
+  for(const s of streets){
+    if(!walk&&s.highway==='pedestrian')continue;
+    const c=walk?0:plan?circOf(s).c:'osm';
+    s.segs.forEach((g,i)=>{
+      const dir=walk?0:c==='osm'?(loose?0:(s.ow[i]||0)):c?c*s.segDir[i]:0;
+      for(let k=1;k<g.length;k++){if(dir>=0)add(g[k-1],g[k],s);if(dir<=0)add(g[k],g[k-1],s)}
+    });
+  }
+  return{adj,pts,has};
+}
+function snap(G,ll){
+  const px=ll.lng*mLon,py=ll.lat*mLat;let best=null;
+  for(const[ka,list]of G.adj)for(const e of list){
+    const a=G.pts.get(ka),b=G.pts.get(e.to);
+    const ax=a.lon*mLon,ay=a.lat*mLat,vx=b.lon*mLon-ax,vy=b.lat*mLat-ay,L2=vx*vx+vy*vy;if(!L2)continue;
+    const t=Math.max(0,Math.min(1,((px-ax)*vx+(py-ay)*vy)/L2)),d=Math.hypot(px-ax-t*vx,py-ay-t*vy);
+    if(!best||d<best.d)best={d,ka,kb:e.to,t,e,p:{lat:(ay+t*vy)/mLat,lon:(ax+t*vx)/mLon}};
+  }
+  return best;
+}
+function shortest(G,from,to){
+  const S=snap(G,from),T=snap(G,to);if(!S||!T||S.d>120||T.d>120)return null;
+  const extra=new Map(),push=(k,e)=>{if(!extra.has(k))extra.set(k,[]);extra.get(k).push(e)};
+  const sp=e=>e.t/e.len;
+  /* départ : on rejoint la rue au point le plus proche, puis on suit les sens permis */
+  const sAB=G.has.has(S.ka+'>'+S.kb),sBA=G.has.has(S.kb+'>'+S.ka),L1=S.e.len;
+  if(sAB)push('S',{to:S.kb,len:(1-S.t)*L1,t:(1-S.t)*L1*sp(S.e),s:S.e.s});
+  if(sBA)push('S',{to:S.ka,len:S.t*L1,t:S.t*L1*sp(S.e),s:S.e.s});
+  const tAB=G.has.has(T.ka+'>'+T.kb),tBA=G.has.has(T.kb+'>'+T.ka),L2=T.e.len;
+  if(tAB)push(T.ka,{to:'T',len:T.t*L2,t:T.t*L2*sp(T.e),s:T.e.s});
+  if(tBA)push(T.kb,{to:'T',len:(1-T.t)*L2,t:(1-T.t)*L2*sp(T.e),s:T.e.s});
+  if(S.ka===T.ka&&S.kb===T.kb&&sAB&&T.t>=S.t)push('S',{to:'T',len:(T.t-S.t)*L1,t:(T.t-S.t)*L1*sp(S.e),s:S.e.s});
+  const pos=k=>k==='S'?S.p:k==='T'?T.p:G.pts.get(k);
+  const dist0=new Map([['S',0]]),prev=new Map(),heap=[[0,'S']],done=new Set();
+  const hpush=x=>{heap.push(x);let i=heap.length-1;while(i){const j=(i-1)>>1;if(heap[j][0]<=heap[i][0])break;[heap[i],heap[j]]=[heap[j],heap[i]];i=j}};
+  const hpop=()=>{const top=heap[0],last=heap.pop();if(heap.length){heap[0]=last;let i=0;for(;;){const l=2*i+1,r=l+1;let m=i;if(l<heap.length&&heap[l][0]<heap[m][0])m=l;if(r<heap.length&&heap[r][0]<heap[m][0])m=r;if(m===i)break;[heap[i],heap[m]]=[heap[m],heap[i]];i=m}}return top};
+  while(heap.length){
+    const[d,u]=hpop();if(done.has(u))continue;done.add(u);if(u==='T')break;
+    for(const e of[...(G.adj.get(u)||[]),...(extra.get(u)||[])]){
+      const nd=d+e.t;if(nd<(dist0.get(e.to)??Infinity)){dist0.set(e.to,nd);prev.set(e.to,{u,e});hpush([nd,e.to])}
+    }
+  }
+  if(!prev.has('T'))return null;
+  const legs=[];let k='T';while(k!=='S'){const{u,e}=prev.get(k);legs.unshift({a:pos(u),b:pos(k),len:e.len,t:e.t,s:e.s});k=u}
+  return{legs,time:dist0.get('T'),len:legs.reduce((x,l)=>x+l.len,0)};
+}
+const bearing=(a,b)=>Math.atan2((b.lat-a.lat)*mLat,(b.lon-a.lon)*mLon)*180/Math.PI;
+function steps(res){
+  const out=[];let cur=null;
+  for(const l of res.legs){
+    if(l.len<.5)continue;
+    if(cur&&cur.s===l.s){cur.len+=l.len;cur.lastB=bearing(l.a,l.b);continue}
+    const b=bearing(l.a,l.b);
+    let turn='start';
+    if(cur){let d=b-cur.lastB;while(d>180)d-=360;while(d<-180)d+=360;
+      turn=Math.abs(d)>150?'uturn':d>55?'left':d>20?'sleft':d<-55?'right':d<-20?'sright':'straight'}
+    cur={s:l.s,len:l.len,turn,b,lastB:b,at:l.a};out.push(cur);
+  }
+  return out;
+}
+const ICON={start:'⬆',left:'↰',right:'↱',sleft:'↖',sright:'↗',straight:'⬆',uturn:'↶',end:'⚑'};
+const nm=s=>s.mode==='todo'?'une rue sans nom':label(s);
+function stepText(st,first){
+  const n=nm(st.s);
+  if(st.turn==='start')return`Partez ${vers(Math.cos(st.b*Math.PI/180),Math.sin(st.b*Math.PI/180))} sur ${n}`;
+  return{left:'Tournez à gauche sur ',right:'Tournez à droite sur ',sleft:'Prenez légèrement à gauche sur ',sright:'Prenez légèrement à droite sur ',straight:'Continuez tout droit sur ',uturn:'Faites demi-tour sur '}[st.turn]+n;
+}
+const fmtD=m=>m<1000?Math.round(m/10)*10+' m':(m/1000).toFixed(1).replace('.',',')+' km';
+const fmtT=s=>s<60?'moins d\'1 min':Math.round(s/60)+' min';
+function computeRoute(){
+  rtLayer.clearLayers();
+  if(!RT.to)return renderRoute();
+  if(RT.from){
+    const G=buildGraph(RT.mode==='walk',RT.plan);
+    RT.res=shortest(G,RT.from,RT.to);
+    if(!RT.res&&RT.mode==='car'){RT.res=shortest(buildGraph(false,RT.plan,true),RT.from,RT.to);if(RT.res)RT.res.loose=true}
+    if(RT.res){
+      RT.res.steps=steps(RT.res);
+      const line=[RT.res.legs[0].a,...RT.res.legs.map(l=>l.b)].map(p=>[p.lat,p.lon]);
+      RT.res.line=line;RT.res.cum=[0];for(let i=1;i<line.length;i++)RT.res.cum.push(RT.res.cum[i-1]+dist({lat:line[i-1][0],lon:line[i-1][1]},{lat:line[i][0],lon:line[i][1]}));
+      let acc=0;for(const st of RT.res.steps){st.d0=acc;acc+=st.len}
+      L.polyline(line,{renderer:rTrajet,color:css('--plan-halo'),weight:11,opacity:.9,lineJoin:'round',interactive:false}).addTo(rtLayer);
+      L.polyline(line,{renderer:rTrajet,color:css('--street-keep'),weight:6.5,opacity:1,lineJoin:'round',dashArray:RT.mode==='walk'?'2 9':null,lineCap:'round',interactive:false}).addTo(rtLayer);
+      map.fitBounds(L.latLngBounds(line),{padding:[60,60],maxZoom:17});
+    }
+    L.circleMarker(RT.from,{renderer:rTrajet,radius:8,color:css('--plan-halo'),weight:3,fillColor:css('--street'),fillOpacity:1,interactive:false}).addTo(rtLayer);
+  }else RT.res=null;
+  L.circleMarker(RT.to,{renderer:rTrajet,radius:9,color:css('--plan-halo'),weight:3,fillColor:css('--red'),fillOpacity:1,interactive:false}).addTo(rtLayer);
+  renderRoute();
+}
+function renderRoute(){
+  const box=$('route');
+  if(!RT.to){box.hidden=true;return}
+  box.hidden=false;
+  const r=RT.res;
+  box.innerHTML=`<div class="eyebrow">Itinéraire</div><h2>${esc(RT.toTxt)}</h2>
+    <div class="rpts"><i class="from"></i><span>${RT.from?`<b>${esc(RT.fromTxt)}</b>`:'<b>Départ ?</b>'} · <a id="rMe">ma position</a> · <a id="rPick">choisir sur la carte</a></span>
+    <i class="to"></i><span><b>${esc(RT.toTxt)}</b></span></div>
+    <div class="rmode"><button class="btn${RT.mode==='car'?' on':''}" type="button" data-m="car">🚗 En voiture</button><button class="btn${RT.mode==='walk'?' on':''}" type="button" data-m="walk">🚶 À pied</button></div>
+    ${RT.mode==='car'?`<label class="toggle" style="margin:4px 0"><input type="checkbox" id="rPlan"${RT.plan?' checked':''}> Avec le plan de circulation proposé (sens alternés)</label>`:''}
+    ${!RT.from?'<p class="empty">Choisis un point de départ : ta position, ou un point sur la carte.</p>':!r?'<p class="empty">Aucun chemin trouvé : le départ ou l\'arrivée est trop loin d\'une rue, ou les sens uniques bloquent le passage.</p>':`
+    <div class="rsum"><b>${fmtT(r.time)}</b><span>${fmtD(r.len)} · ${RT.mode==='walk'?'à pied, 5 km/h':'en voiture, sans bouchons'}</span></div>${r.loose?'<p class="empty" style="margin:0 0 6px">Trajet approximatif : certains sens uniques ont été ignorés pour trouver un chemin.</p>':''}
+    <div class="row"><button class="btn primary" type="button" id="rGo">${online()?'Démarrer le guidage':'Voir le trajet en démonstration'}</button>${online()?'<button class="btn" type="button" id="rDemo">Démonstration</button>':''}<button class="btn" type="button" id="rClear">Effacer</button></div>
+    <ol class="rsteps" id="rSteps">${r.steps.map((st,i)=>`<li data-i="${i}"><span class="ic">${ICON[st.turn]}</span><span>${esc(stepText(st))}</span><span class="d">${fmtD(st.len)}</span></li>`).join('')}<li><span class="ic">${ICON.end}</span><span>Arrivée : ${esc(RT.toTxt)}</span><span class="d"></span></li></ol>`}
+    ${!r?'<div class="row"><button class="btn" type="button" id="rClear">Effacer</button></div>':''}`;
+  box.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{RT.mode=b.dataset.m;computeRoute()});
+  const pl=$('rPlan');if(pl)pl.onchange=e=>{RT.plan=e.target.checked;computeRoute()};
+  const me=$('rMe');if(me)me.onclick=locateStart;
+  $('rPick').onclick=()=>{picking=true;$('pickTxt').textContent='Clique sur la carte pour choisir le point de départ';$('pickHint').hidden=false};
+  const c=$('rClear');if(c)c.onclick=clearRoute;
+  const g=$('rGo');if(g)g.onclick=()=>online()?startGPS():startDemo();
+  const d=$('rDemo');if(d)d.onclick=startDemo;
+}
+$('pickCancel').onclick=()=>{picking=false;$('pickHint').hidden=true};
+function routeTo(latlng,txt){RT.to=latlng;RT.toTxt=txt;if(!RT.from&&online())locateStart();computeRoute()}
+function setStart(latlng,txt){RT.from=latlng;RT.fromTxt=txt;if(!RT.to){RT.toTxt='Choisis une destination';chipText('Départ choisi. Cherche ou clique une adresse, puis « Y aller ».');RT.to=null}computeRoute()}
+function clearRoute(){stopGuide();RT.from=RT.to=RT.res=null;rtLayer.clearLayers();renderRoute()}
+function locateStart(){
+  if(!online()||!navigator.geolocation){chipText('« Ma position » marche une fois la carte en ligne. Choisis le départ sur la carte.');picking=true;$('pickHint').hidden=false;return}
+  chipText('Recherche de ta position…');
+  navigator.geolocation.getCurrentPosition(p=>{chipText('');const ll=L.latLng(p.coords.latitude,p.coords.longitude);const a=addressAt(ll);RT.from=ll;RT.fromTxt=a?'Ma position · '+addrText(a):'Ma position';computeRoute()},
+    ()=>{chipText('Position introuvable. Choisis le départ sur la carte.');picking=true;$('pickHint').hidden=false},{enableHighAccuracy:true,timeout:15000});
+}
+
+/* ---------- guidage pas à pas (GPS ou démonstration) ---------- */
+let guideTimer=null,watchId=null,guideMarker=null;
+function routeAt(d){
+  const r=RT.res,c=r.cum;let i=1;while(i<c.length-1&&c[i]<d)i++;
+  const A=r.line[i-1],B=r.line[i],t=Math.max(0,Math.min(1,(d-c[i-1])/((c[i]-c[i-1])||1)));
+  return L.latLng(A[0]+(B[0]-A[0])*t,A[1]+(B[1]-A[1])*t);
+}
+function headingAt(d){const a=routeAt(Math.max(0,d-2)),b=routeAt(Math.min(RT.res.len,d+4));return-Math.atan2((b.lat-a.lat)*mLat,(b.lng-a.lng)*mLon)*180/Math.PI}
+function guideUpdate(d,ll){
+  const r=RT.res;if(!r)return;
+  if(!guideMarker)guideMarker=L.marker(ll,{icon:vehIcon(),pane:'vehicule',interactive:false,keyboard:false}).addTo(rtLayer);
+  else guideMarker.setLatLng(ll);
+  const el=guideMarker.getElement&&guideMarker.getElement();const v=el&&el.querySelector('.veh');
+  if(v){let h=headingAt(d);v.style.transform='rotate('+h.toFixed(0)+'deg)'}
+  const left=r.len-d;
+  if(left<12){$('gTurn').textContent=ICON.end;$('gMain').textContent='Vous êtes arrivé';$('gSub').textContent=RT.toTxt;stopGuide(true);return}
+  let k=0;while(k+1<r.steps.length&&r.steps[k+1].d0<=d)k++;
+  const nx=r.steps[k+1];
+  if(nx){$('gTurn').textContent=ICON[nx.turn];$('gMain').textContent='Dans '+fmtD(nx.d0-d)+' : '+stepText(nx).replace(/^./,c=>c.toLowerCase());$('gSub').textContent='Encore '+fmtD(left)+' · actuellement sur '+nm(r.steps[k].s)}
+  else{$('gTurn').textContent=ICON.end;$('gMain').textContent='Arrivée dans '+fmtD(left);$('gSub').textContent=RT.toTxt}
+  document.querySelectorAll('#rSteps li').forEach(li=>li.classList.toggle('cur',+li.dataset.i===k));
+}
+function startDemo(){
+  stopGuide();const r=RT.res;if(!r)return;$('guide').hidden=false;
+  let d=0;const speed=RT.mode==='walk'?30:60;let last=performance.now();
+  map.setView(r.line[0],17);
+  const f=now=>{const dt=Math.min(.1,(now-last)/1000);last=now;d+=speed*dt;const ll=routeAt(Math.min(d,r.len));guideUpdate(d,ll);
+    if(guideTimer!==null){follow(ll);if(d<r.len)guideTimer=requestAnimationFrame(f)}};
+  guideTimer=requestAnimationFrame(f);
+}
+function startGPS(){
+  stopGuide();if(!RT.res)return;$('guide').hidden=false;$('gMain').textContent='Recherche du GPS…';$('gSub').textContent='';
+  watchId=navigator.geolocation.watchPosition(p=>{
+    const ll=L.latLng(p.coords.latitude,p.coords.longitude);
+    /* où en est-on sur le trajet ? */
+    const r=RT.res;let best=Infinity,bd=0;
+    for(let i=1;i<r.line.length;i++){const A=r.line[i-1],B=r.line[i],ax=A[1]*mLon,ay=A[0]*mLat,vx=B[1]*mLon-ax,vy=B[0]*mLat-ay,L2=vx*vx+vy*vy||1;
+      const t=Math.max(0,Math.min(1,((ll.lng*mLon-ax)*vx+(ll.lat*mLat-ay)*vy)/L2)),dd=Math.hypot(ll.lng*mLon-ax-t*vx,ll.lat*mLat-ay-t*vy);if(dd<best){best=dd;bd=r.cum[i-1]+t*Math.sqrt(L2)}}
+    if(best>45){RT.from=ll;RT.fromTxt='Ma position';computeRoute();$('guide').hidden=false;$('gSub').textContent='Nouveau trajet calculé';return}
+    follow(ll);guideUpdate(bd,ll);
+  },()=>{$('gMain').textContent='GPS indisponible';$('gSub').textContent='Autorise la position dans le navigateur.'},{enableHighAccuracy:true,maximumAge:2000});
+}
+function stopGuide(keepBanner){
+  if(guideTimer!==null){cancelAnimationFrame(guideTimer);guideTimer=null}
+  if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null}
+  if(!keepBanner){$('guide').hidden=true;if(guideMarker){rtLayer.removeLayer(guideMarker);guideMarker=null}}
+}
+$('gStop').onclick=()=>stopGuide();
+
+/* ---------- chercher une adresse : « 27 Rue Camara Laye » ---------- */
+const norm=t=>String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+const STOP=new Set(['rue','avenue','av','boulevard','bd','r','de','la','le','du','des','l','d']);
+function findAddress(query){
+  const m=String(query).match(/\d+/);const no=m?+m[0]:null;
+  const words=norm(query.replace(/\d+/g,' ')).split(' ').filter(w=>w&&!STOP.has(w));
+  if(!words.length)return{err:'Écris un nom de rue, par exemple « 27 Rue Camara Laye ».'};
+  let best=null,bs=0;
+  for(const s of streets){if(s.mode==='todo')continue;const n=norm(label(s));const sc=words.filter(w=>n.includes(w)).length/words.length;if(sc>bs){bs=sc;best=s}}
+  if(!best||bs<.6)return{err:'Aucune rue ne correspond à « '+query+' ».'};
+  let n=no&&no>0?no:1;if(n>best.maxNo)n=best.maxNo;
+  const left=n%2===1,d=Math.floor((n-1)/2)*STEP+STEP/2;
+  const P=pointAt(best,Math.min(d,best.total));
+  const OFF=7,x=P.x+(left?-P.uy:P.uy)*OFF,y=P.y+(left?P.ux:-P.ux)*OFF;
+  return{s:best,no:n,latlng:L.latLng(y/mLat,x/mLon),capped:no&&no>best.maxNo};
+}
+$('findForm').addEventListener('submit',e=>{
+  e.preventDefault();const q=$('findIn').value.trim();if(!q)return;
+  const r=findAddress(q);
+  if(r.err){chipText(r.err);return}
+  map.setView(r.latlng,18);
+  const a=addressAt(r.latlng);
+  setTimeout(()=>showAddress(r.latlng,a,r.capped?'Ce numéro n\'existe pas : la rue s\'arrête au n° '+r.s.maxNo+'.':''),250);
+  if(a){RT.to=r.latlng;RT.toTxt=addrText(a);computeRoute();map.setView(r.latlng,18)}
+});
+
+/* ---------- Où suis-je ? (GPS du téléphone) ---------- */
+$('whereBtn').addEventListener('click',()=>{
+  if(!navigator.geolocation){chipText('Ton navigateur ne donne pas la position.');return}
+  if(!online()){chipText('« Où suis-je ? » marche une fois la carte mise en ligne (adresse en https).');return}
+  chipText('Recherche de ta position…');
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const ll=L.latLng(pos.coords.latitude,pos.coords.longitude);
+    if(hereMarker)map.removeLayer(hereMarker);
+    hereMarker=L.circleMarker(ll,{radius:8,color:css('--plan-halo'),weight:3,fillColor:css('--street-keep'),fillOpacity:1}).addTo(map);
+    map.setView(ll,18);
+    const a=addressAt(ll);chipText('');
+    if(!a){chipText('Tu es hors de Kaloum ou loin d\'une rue (précision : '+Math.round(pos.coords.accuracy)+' m).');return}
+    setTimeout(()=>showAddress(ll,a,'Ta position, à '+Math.round(pos.coords.accuracy)+' m près'),250);
+  },err=>chipText(err.code===1?'Tu as refusé l\'accès à ta position. Autorise-le dans le navigateur.':'Position introuvable. Réessaie dehors.'),{enableHighAccuracy:true,timeout:15000});
+});
+
+/* ---------- lien partagé : ouvre la carte sur une adresse ---------- */
+function openHash(){
+  const m=location.hash.match(/^#(-?\d+\.\d+),(-?\d+\.\d+)$/);if(!m||!streets.length)return;
+  const ll=L.latLng(+m[1],+m[2]);map.setView(ll,18);setTimeout(()=>showAddress(ll,addressAt(ll)),300);
+}
+window.addEventListener('hashchange',openHash);
+
+/* ---------- plaque de rue à la parisienne, avec QR code ---------- */
+function plaqueSVG(s){
+  const name=label(s).toUpperCase(),p=s.pid?byId[s.pid]:null;
+  const cp=(s.cps[0]||{cp:CP}).cp;
+  const sub=p?`${p.name} · ${p.dates}`:'';
+  const sub2=p?(p.cat+(p.pays&&p.pays!=='Guinée'?' · '+p.pays:'')):'';
+  const W=600,fs=name.length>22?38:46,est=name.length*fs*.62,fit=est>W-60?` textLength="${W-60}" lengthAdjust="spacingAndGlyphs"`:'';
+  const H=p?250:190;
+  return`<svg class="sign" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Plaque : ${esc(label(s))}">
+  <rect x="2" y="2" width="${W-4}" height="${H-4}" rx="26" fill="#1c3e74" stroke="#0e2346" stroke-width="4"/>
+  <rect x="14" y="14" width="${W-28}" height="${H-28}" rx="18" fill="none" stroke="#ffffff" stroke-width="5"/>
+  <text x="${W/2}" y="52" text-anchor="middle" fill="#ffffff" font-family="Instrument Sans,Arial,sans-serif" font-weight="700" font-size="20" letter-spacing="4">${cp} · KALOUM</text>
+  <line x1="60" y1="66" x2="${W-60}" y2="66" stroke="#ffffff" stroke-width="2" opacity=".6"/>
+  <text x="${W/2}" y="${66+fs+14}" text-anchor="middle" fill="#ffffff" font-family="Bricolage Grotesque,Arial Narrow,Arial,sans-serif" font-weight="800" font-size="${fs}"${fit}>${esc(name)}</text>
+  ${p?`<line x1="60" y1="${66+fs+34}" x2="${W-60}" y2="${66+fs+34}" stroke="#ffffff" stroke-width="2" opacity=".6"/>
+  <text x="${W/2}" y="${66+fs+66}" text-anchor="middle" fill="#ffffff" font-family="Instrument Sans,Arial,sans-serif" font-weight="600" font-size="22">${esc(sub)}</text>
+  <text x="${W/2}" y="${66+fs+94}" text-anchor="middle" fill="#ffffff" opacity=".85" font-family="Instrument Sans,Arial,sans-serif" font-size="19">${esc(sub2)}</text>`:''}
+</svg>`;
+}
+function plaqueBlock(s){
+  if(s.mode==='todo')return'';
+  const m=pointAt(s,s.total/2),url=shareUrl(m.y/mLat,m.x/mLon);
+  let qr='';
+  try{if(window.qrcode){const q=qrcode(0,'M');q.addData(url);q.make();qr=`<div class="qr" title="Scanner pour ouvrir la rue sur la carte">${q.createSvgTag({cellSize:3,margin:0,scalable:true})}</div>`}}catch(e){}
+  return`<div class="eyebrow" style="margin-top:4px">Plaque de rue</div><div class="plaque">${plaqueSVG(s)}${qr}</div>
+    <div class="row" style="margin:-4px 0 10px"><button class="btn" type="button" id="plaqueDl">Télécharger la plaque (SVG)</button></div>
+    ${online()?'':'<small style="display:block;color:var(--muted);font-size:11px;margin:-6px 0 10px">Le QR code ouvrira la rue sur la carte une fois celle-ci mise en ligne.</small>'}`;
+}
+function bindPlaque(s){
+  const b=$('plaqueDl');if(!b)return;
+  b.onclick=()=>{const svg=plaqueSVG(s).replace('class="sign" ','');const blob=new Blob([svg],{type:'image/svg+xml'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='plaque-'+norm(label(s)).replace(/ /g,'-')+'.svg';document.body.appendChild(a);a.click();a.remove()};
+}
+/* numéros affichés sur la carte quand on zoome fort */
+const numLayer=L.layerGroup().addTo(map);
+function drawNumbers(){
+  numLayer.clearLayers();
+  if(map.getZoom()<18||!streets.length)return;
+  const bb=map.getBounds().pad(0.1);let n=0;const OFF=7,EVERY=20;
+  for(const s of streets)for(let k=EVERY/2;k<s.total;k+=EVERY){
+    const P=pointAt(s,k);
+    if(P.jump||!bb.contains([P.y/mLat,P.x/mLon]))continue;
+    for(const left of[true,false]){
+      const sx=P.x+(left?-P.uy:P.uy)*OFF,sy=P.y+(left?P.ux:-P.ux)*OFF;
+      L.marker([sy/mLat,sx/mLon],{interactive:false,keyboard:false,icon:L.divIcon({className:'qwrap',html:`<span class="hno${left?' odd':''}">${houseNo(k,left)}</span>`,iconSize:null})}).addTo(numLayer);
+      if(++n>900)return;
+    }
+  }
+}
+map.on('zoomend moveend',()=>setTimeout(drawNumbers,0));
+
+/* ---------- circulation ----------
+   1. Sens uniques déjà connus (OpenStreetMap).
+   2. Proposition : dans le damier, les rues parallèles alternent de sens, une sur deux (comme à Manhattan).
+      Les grands axes restent à double sens.
+   3. Points noirs : les carrefours où se croisent le plus de voies importantes. */
+const circLayer=L.layerGroup();
+const W={trunk:4,primary:4,secondary:3,tertiary:2};
+const angD=(x,y)=>{const d=Math.abs(x-y)%180;return Math.min(d,180-d)};
+function computeCirculation(){
+  for(const s of streets){
+    const[dx,dy]=s.vec,crow=Math.hypot(dx,dy);
+    s.bear=((Math.atan2(dy,dx)*180/Math.PI)+180)%180;
+    s.cand=!MAJOR[s.highway]&&!s.ow.some(v=>v)&&s.total>=80&&crow/s.total>0.85;
+    s.prop=0;
+  }
+  const hist=new Array(36).fill(0);
+  for(const s of streets)if(s.cand)hist[Math.floor(s.bear/5)%36]+=s.total;
+  const sm=hist.map((v,i)=>v+.5*(hist[(i+35)%36]+hist[(i+1)%36]));
+  const p1=sm.indexOf(Math.max(...sm));
+  let p2=-1,b2=0;sm.forEach((v,i)=>{const dd=Math.min(Math.abs(i-p1),36-Math.abs(i-p1));if(dd>=9&&v>b2){b2=v;p2=i}});
+  for(const pk of[p1,p2]){
+    if(pk<0||!sm[pk])continue;
+    const th=(pk*5+2.5),r=th*Math.PI/180,ux=Math.cos(r),uy=Math.sin(r),nx=-uy,ny=ux;
+    const fam=streets.filter(s=>s.cand&&!s.prop&&angD(s.bear,th)<=20);
+    const off=s=>{const m=pointAt(s,s.total/2);return m.x*nx+m.y*ny};
+    const buckets=[...new Set(fam.map(s=>Math.round(off(s)/30)))].sort((a,b)=>a-b);
+    for(const s of fam){
+      const idx=buckets.indexOf(Math.round(off(s)/30)),sg=idx%2===0?1:-1;
+      s.prop=Math.sign(s.vec[0]*ux+s.vec[1]*uy)*sg||sg;
+    }
+  }
+  blackspots();
+}
+/* sens d'une rue : 'osm' (sens unique connu), 1 ou -1 (sens unique dans le sens des numéros ou à l'inverse), 0 (double sens) */
+function circOf(s){
+  const o=saved.dir[s.key];
+  if(o!==undefined)return{c:o,src:'choix'};
+  if(s.ow.some(v=>v))return{c:'osm',src:'osm'};
+  return{c:s.prop,src:s.prop?'prop':'none'};
+}
+let spots=[];
+function blackspots(){
+  const m=new Map();
+  for(const s of streets)for(const g of s.segs)for(const p of g){const k=NK(p);if(!m.has(k))m.set(k,{lat:p.lat,lon:p.lon,ss:new Set()});m.get(k).ss.add(s)}
+  let pts=[...m.values()].filter(v=>v.ss.size>=2).map(v=>({...v,score:[...v.ss].reduce((a,s)=>a+(W[s.highway]||1),0)}));
+  pts.sort((a,b)=>b.score-a.score);
+  const out=[];
+  for(const p of pts){
+    const near=out.find(o=>Math.hypot((o.lat-p.lat)*mLat,(o.lon-p.lon)*mLon)<45);
+    if(near){p.ss.forEach(s=>near.ss.add(s));continue}
+    out.push({...p,ss:new Set(p.ss)});
+  }
+  for(const o of out)o.score=[...o.ss].reduce((a,s)=>a+(W[s.highway]||1),0);
+  out.sort((a,b)=>b.score-a.score);
+  spots=out.filter(o=>o.score>=6).slice(0,12);
+  if(spots.length<5)spots=out.filter(o=>o.score>=4&&o.ss.size>=2).slice(0,8);
+}
+function arrow(lat,lon,ux,uy,cls){
+  const deg=-Math.atan2(uy,ux)*180/Math.PI;
+  L.marker([lat,lon],{interactive:false,keyboard:false,icon:L.divIcon({className:'qwrap',html:`<span class="arw ${cls}" style="transform:translate(-50%,-50%) rotate(${deg.toFixed(0)}deg)">➜</span>`,iconSize:null})}).addTo(circLayer);
+}
+function drawCirc(){
+  circLayer.clearLayers();
+  if(!circShown||!streets.length){map.removeLayer(circLayer);return}
+  const EVERY=90;
+  for(const s of streets){
+    const{c,src}=circOf(s);
+    if(c==='osm'){
+      s.segs.forEach((g,i)=>{const ow=s.ow[i];if(!ow)return;const tmp={chain:ow>0?g:[...g].reverse()};tmp.cum=[0];for(let j=1;j<tmp.chain.length;j++)tmp.cum.push(tmp.cum[j-1]+dist(tmp.chain[j-1],tmp.chain[j]));const T=tmp.cum[tmp.cum.length-1];
+        for(let k=Math.min(T/2,EVERY/2);k<T;k+=EVERY){const P=pointAt(tmp,k);arrow(P.y/mLat,P.x/mLon,P.ux,P.uy,'osm')}});
+    }else if(c){
+      for(let k=Math.min(s.total/2,EVERY/2);k<s.total;k+=EVERY){const P=pointAt(s,k);if(P.jump)continue;arrow(P.y/mLat,P.x/mLon,P.ux*c,P.uy*c,src==='choix'?'prop':'prop')}
+    }
+  }
+  spots.forEach((o,i)=>{
+    const names=[...o.ss].map(s=>s.mode==='todo'?'rue sans nom':label(s));
+    L.marker([o.lat,o.lon],{keyboard:false,icon:L.divIcon({className:'qwrap',html:`<span class="bs">${i+1}</span>`,iconSize:null})})
+      .bindTooltip(`<b>Point noir n° ${i+1}</b><br>${names.map(esc).join(' × ')}`,{direction:'top'}).addTo(circLayer);
+  });
+  circLayer.addTo(map);
+  chipText(`Circulation : flèches bleues = sens uniques existants, orange = sens proposés · ${spots.length} points noirs`);
+}
+
+/* ---------- projet de tramway T1 : boucle Coyah – Conakry – Kaloum – Coyah ----------
+   Tronc commun Coyah – Sanoyah (Km 36). Branche nord par le corridor de la route Le Prince,
+   branche sud par le corridor de l'autoroute. Dans Kaloum, une boucle dessert le port,
+   le centre administratif et les quartiers de la pointe, en suivant les vraies rues de la carte.
+   Hors de Kaloum, les stations sont placées en cherchant leur nom sur OpenStreetMap (Nominatim)
+   et le tracé suit les routes (OSRM). Positions approximatives en secours. Tout reste à étudier. */
+const TRAM_STATIONS={
+  coyah:{n:'Coyah',q:'Coyah',ll:[9.7056,-13.3858],big:1},
+  maneah:{n:'Manéah',q:'Manéah',ll:[9.7005,-13.4128]},
+  km36:{n:'Sanoyah – Km 36',q:'Kilomètre 36 Sanoyah',ll:[9.6705,-13.4580],big:1},
+  kagbelen:{n:'Kagbélen',q:'Kagbélen',ll:[9.6930,-13.5190]},
+  sonfonia:{n:'Sonfonia',q:'Sonfonia',ll:[9.6640,-13.5660]},
+  lambanyi:{n:'Lambanyi',q:'Lambanyi',ll:[9.6420,-13.5990]},
+  cosa:{n:'Cosa',q:'Cosa Ratoma',ll:[9.6020,-13.6170]},
+  bambeto:{n:'Bambeto',q:'Bambeto',ll:[9.5830,-13.6400]},
+  hamdallaye:{n:'Hamdallaye',q:'Hamdallaye Ratoma',ll:[9.5660,-13.6510]},
+  dixinn:{n:'Dixinn',q:'Dixinn',ll:[9.5450,-13.6750]},
+  pont:{n:'Pont du 8 Novembre',q:'',ll:[9.5252,-13.6880],big:1,k:1},
+  port:{n:'Port autonome',q:'',ll:[9.5157,-13.7080],k:1},
+  almamya:{n:'Almamya – Centre administratif',q:'',ll:[9.5105,-13.7113],big:1,k:1},
+  sandervalia:{n:'Sandervalia',q:'',ll:[9.5086,-13.7186],k:1},
+  coronthie:{n:'Coronthie',q:'',ll:[9.5047,-13.7142],k:1},
+  boulbinet:{n:'Boulbinet',q:'',ll:[9.5079,-13.7043],k:1},
+  manquepas:{n:'Manquepas',q:'',ll:[9.5089,-13.7090],k:1},
+  madina:{n:'Madina (marché)',q:'Marché Madina',ll:[9.5470,-13.6610]},
+  matam:{n:'Matam',q:'Matam',ll:[9.5560,-13.6420]},
+  gbessia:{n:'Gbessia – Aéroport',q:'Aéroport international Ahmed Sékou Touré',ll:[9.5769,-13.6120],big:1},
+  matoto:{n:'Matoto',q:'Matoto',ll:[9.5880,-13.5950]},
+  tombolia:{n:'Tombolia',q:'Tombolia',ll:[9.6150,-13.5560]},
+};
+const TRAM_LINES=[
+  {id:'tronc',nom:'Tronc commun Coyah – Sanoyah',st:['coyah','maneah','km36']},
+  {id:'nord',nom:'Branche nord (corridor route Le Prince)',st:['km36','kagbelen','sonfonia','lambanyi','cosa','bambeto','hamdallaye','dixinn','pont']},
+  {id:'kaloum',nom:'Boucle de Kaloum',st:['pont','port','almamya','sandervalia','coronthie','boulbinet','manquepas','pont'],local:1},
+  {id:'sud',nom:'Branche sud (corridor de l\'autoroute)',st:['pont','madina','matam','gbessia','matoto','tombolia','km36']}
+];
+const TRAM_INFO={
+  coyah:'Terminus. Gare routière vers l\'intérieur du pays.',km36:'Nœud de correspondance entre les deux branches et le tronc vers Coyah.',
+  pont:'Entrée de Kaloum : les deux branches s\'y rejoignent et font la boucle de la presqu\'île.',
+  port:'Port autonome de Conakry.',almamya:'Centre administratif : ministères, banques. Correspondance avec le train Conakry Express.',
+  boulbinet:'Port de pêche et quartier de Boulbinet.',coronthie:'Pointe de la presqu\'île. Embarcadère vers les îles de Loos (commune de Kassa).',
+  gbessia:'Aéroport international. Commune la plus peuplée de Conakry (520 000 habitants en 2025).',
+  kagbelen:'Correspondance avec le train Conakry Express (terminus de Kagbélen). 395 000 habitants en 2025.',
+  lambanyi:'386 000 habitants en 2025.',sonfonia:'310 000 habitants en 2025.',tombolia:'373 000 habitants en 2025.'
+};
+map.createPane('tram');map.getPane('tram').style.zIndex=450;map.getPane('tram').style.pointerEvents='none';
+map.createPane('tramst');map.getPane('tramst').style.zIndex=640;
+const rTram=L.svg({pane:'tram'});
+const tramLayer=L.layerGroup();let tramGeom=null,tramBusy=false;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+/* tracé dans Kaloum : plus court chemin sur les vraies rues de la carte (sens uniques ignorés pour un tram) */
+function kaloumLeg(a,b){
+  try{
+    const G=buildGraph(true,false),res=shortest(G,L.latLng(a[0],a[1]),L.latLng(b[0],b[1]));
+    if(res&&res.legs.length)return[res.legs[0].a,...res.legs.map(l=>l.b)].map(p=>[p.lat,p.lon]);
+  }catch(e){}
+  return[a,b];
+}
+function provisional(){
+  const pos={},lines={};
+  for(const[k,st]of Object.entries(TRAM_STATIONS))pos[k]={ll:st.ll,src:'approx'};
+  for(const ln of TRAM_LINES)lines[ln.id]={g:ln.st.map(k=>pos[k].ll),src:'droit'};
+  return{v:2,pos,lines,provisional:true};
+}
+async function tramCompute(){
+  try{const c=JSON.parse(localStorage.getItem(STORE+'-tram')||'null');if(c&&c.v===2)return c}catch(e){}
+  const pos={};let i=0;const keys=Object.keys(TRAM_STATIONS);
+  for(const k of keys){
+    const st=TRAM_STATIONS[k];pos[k]={ll:st.ll,src:st.k?'kaloum':'approx'};i++;
+    if(!st.q)continue;
+    chipText(`Tramway : placement des stations sur OpenStreetMap ${i}/${keys.length}…`);
+    try{
+      const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=gn&viewbox=-13.80,9.85,-13.30,9.45&bounded=1&q='+encodeURIComponent(st.q));
+      const j=await r.json();
+      if(j[0]){const ll=[+j[0].lat,+j[0].lon];if(Math.hypot((ll[0]-st.ll[0])*mLat,(ll[1]-st.ll[1])*mLon)<4000)pos[k]={ll,src:'osm'}}
+    }catch(e){}
+    await sleep(1100); /* règle d'usage de Nominatim : une requête par seconde */
+  }
+  const lines={};
+  for(const ln of TRAM_LINES){
+    const coords=ln.st.map(k=>pos[k].ll);
+    if(ln.local){
+      const g=[];for(let j=1;j<coords.length;j++){const leg=kaloumLeg(coords[j-1],coords[j]);g.push(...(g.length?leg.slice(1):leg))}
+      lines[ln.id]={g,src:'kaloum'};continue;
+    }
+    chipText('Tramway : tracé de la '+ln.nom.toLowerCase()+'…');
+    try{
+      const r=await fetch('https://router.project-osrm.org/route/v1/driving/'+coords.map(c=>c[1]+','+c[0]).join(';')+'?overview=full&geometries=geojson');
+      const j=await r.json();
+      lines[ln.id]=j.routes&&j.routes[0]?{g:j.routes[0].geometry.coordinates.map(([lo,la])=>[la,lo]),src:'route'}:{g:coords,src:'droit'};
+    }catch(e){lines[ln.id]={g:coords,src:'droit'}}
+  }
+  const res={v:2,pos,lines};
+  try{localStorage.setItem(STORE+'-tram',JSON.stringify(res))}catch(e){}
+  return res;
+}
+const lenLL=g=>g.reduce((a,p,i)=>i?a+dist({lat:g[i-1][0],lon:g[i-1][1]},{lat:p[0],lon:p[1]}):a,0);
+function drawTram(geom){
+  tramLayer.clearLayers();
+  const col=css('--tram'),halo='#ffffff';
+  const km={};
+  /* comme sur un plan de transport : ligne épaisse, liseré blanc, stations blanches cerclées, noms toujours visibles */
+  for(const ln of TRAM_LINES){
+    const g=geom.lines[ln.id].g;km[ln.id]=lenLL(g)/1000;
+    /* symbole de voie ferrée : fond blanc, rail noir et traverses noires perpendiculaires */
+    const op=geom.provisional?.55:1;
+    L.polyline(g,{renderer:rTram,color:halo,weight:16,opacity:.9,lineCap:'round',lineJoin:'round',interactive:false}).addTo(tramLayer);
+    L.polyline(g,{renderer:rTram,color:'#111111',weight:12,opacity:op,lineCap:'butt',lineJoin:'round',dashArray:'2 9',interactive:false}).addTo(tramLayer);
+    L.polyline(g,{renderer:rTram,color:'#111111',weight:4,opacity:op,lineCap:'round',lineJoin:'round',interactive:false}).addTo(tramLayer);
+  }
+  for(const[k,st]of Object.entries(TRAM_STATIONS)){
+    const p=geom.pos[k];
+    const m=L.marker(p.ll,{pane:'tramst',keyboard:false,icon:L.divIcon({className:'qwrap',html:`<span class="tram-st${st.big?' big':''}"></span>`,iconSize:null})}).addTo(tramLayer);
+    m.bindTooltip(esc(st.n),{permanent:true,direction:'right',offset:[9,0],className:'tramlbl'+(st.big?' big':'')+(st.k?' kal':'')});
+    m.bindPopup(`<div class="adr"><b>T1 · ${esc(st.n)}</b>${TRAM_INFO[k]?esc(TRAM_INFO[k]):'Station proposée.'}<small>Position ${p.src==='osm'?'trouvée sur OpenStreetMap':p.src==='kaloum'?'sur les rues de Kaloum':'approximative'} — à confirmer par une étude de tracé.</small></div>`);
+  }
+  /* pastilles « T1 » aux deux terminus et à l'entrée de Kaloum */
+  for(const k of['coyah','pont']){
+    const p=geom.pos[k];
+    L.marker(p.ll,{pane:'tramst',interactive:false,keyboard:false,icon:L.divIcon({className:'qwrap',html:'<span class="tram-badge">T1</span>',iconSize:null})}).addTo(tramLayer);
+  }
+  return km;
+}
+function tramLabelsByZoom(){
+  const z=map.getZoom(),el=map.getContainer();
+  el.classList.toggle('tram-z-lo',z<12);el.classList.toggle('tram-z-kal',z<14);
+}
+map.on('zoomend',tramLabelsByZoom);
+async function showTram(fit){
+  if(!tramShown){map.removeLayer(tramLayer);return}
+  tramLayer.addTo(map);
+  if(!tramGeom){
+    /* on montre tout de suite le tracé provisoire, puis le tracé précis quand il est prêt */
+    const km=drawTram(provisional());
+    if(fit){map.fitBounds(L.latLngBounds(Object.values(TRAM_STATIONS).map(s=>s.ll)),{padding:[40,40]})}
+    tramLabelsByZoom();
+    if(tramBusy)return;tramBusy=true;tramGeom=await tramCompute();tramBusy=false;
+    if(!tramShown)return;
+    fit=false;
+  }
+  const km=drawTram(tramGeom);
+  const total=km.tronc*2+km.nord+km.sud+km.kaloum;
+  chipText(`Tramway T1 · boucle Coyah – Conakry – Kaloum – Coyah : environ ${Math.round(total)} km, ${Object.keys(TRAM_STATIONS).length} stations (dont ${Object.values(TRAM_STATIONS).filter(s=>s.k).length} dans Kaloum). Tracé indicatif à étudier.`);
+  if(fit){map.fitBounds(L.latLngBounds(Object.values(tramGeom.lines).flatMap(l=>l.g)),{padding:[40,40]})}
+  tramLabelsByZoom();
+}
+
+/* ---------- bâtiments, espaces verts et quartiers ---------- */
+const Q_EXTRA=`[out:json][timeout:120];
+area["name"="Kaloum"]["boundary"="administrative"]->.k;
+(way(area.k)["building"];
+ way(area.k)["leisure"~"^(park|garden|pitch|stadium)$"];
+ way(area.k)["landuse"~"^(grass|recreation_ground|cemetery|forest|village_green)$"];
+ way(area.k)["natural"~"^(wood|scrub)$"];);
+out geom qt;
+way(area.k)["place"~"^(suburb|quarter|neighbourhood)$"];
+out geom;
+rel(area.k)["boundary"="administrative"]["admin_level"~"^(9|10|11)$"];
+out geom;
+node(area.k)["place"~"^(suburb|quarter|neighbourhood)$"];
+out;`;
+async function loadExtra(){
+  chipText('Chargement des bâtiments et des quartiers…');
+  try{
+    let data=null;
+    try{const c=localStorage.getItem(STORE+'-extra');if(c)data=JSON.parse(c)}catch(e){}
+    if(!data){
+      try{data=await overpass(Q_EXTRA);try{localStorage.setItem(STORE+'-extra',JSON.stringify(data));localStorage.removeItem(STORE+'-extra-backup')}catch(e){}}
+      catch(err){let bk=null;try{bk=localStorage.getItem(STORE+'-extra-backup')}catch(_){}
+        if(!bk)throw err;data=JSON.parse(bk);try{localStorage.setItem(STORE+'-extra',bk);localStorage.removeItem(STORE+'-extra-backup')}catch(_){}}
+    }
+    extraLayer.clearLayers();qpolys=[];
+    let nb=0;
+    for(const e of data.elements){
+      if((e.type==='way'&&e.tags&&e.tags.place&&e.tags.name)||(e.type==='relation'&&e.tags&&e.tags.name&&e.members)){
+        const lines=e.type==='way'?[e.geometry]:e.members.filter(m=>m.role==='outer'&&m.geometry).map(m=>m.geometry);
+        if(lines.length&&!/^kaloum$/i.test(e.tags.name)){const edges=[];for(const g of lines)for(let i=1;i<g.length;i++)edges.push([g[i-1],g[i]]);
+          qpolys.push({name:e.tags.name,edges,lines});
+          if(!quartiers.some(q=>q.name===e.tags.name)){const pts=lines.flat();quartiers.push({name:e.tags.name,lat:pts.reduce((a,p)=>a+p.lat,0)/pts.length,lon:pts.reduce((a,p)=>a+p.lon,0)/pts.length})}}
+      }else if(e.type==='way'&&e.geometry&&e.geometry.length>2){
+        const ring=e.geometry.map(p=>[p.lat,p.lon]);const t=e.tags||{};
+        if(t.building){nb++;L.polygon(ring,{renderer:rBati,color:css('--plan-bati-line'),weight:.6,fillColor:css('--plan-bati'),fillOpacity:1,interactive:false}).addTo(extraLayer)}
+        else L.polygon(ring,{renderer:rBati,stroke:false,fillColor:css('--plan-park'),fillOpacity:1,interactive:false}).addTo(extraLayer);
+      }else if(e.type==='node'&&e.tags&&e.tags.name&&!/^kaloum$/i.test(e.tags.name)){
+        const q=quartiers.find(q=>q.name===e.tags.name);if(q){q.lat=e.lat;q.lon=e.lon}else quartiers.push({name:e.tags.name,lat:e.lat,lon:e.lon});
+      }
+    }
+    setQuartiers();
+    applyBase();chipText('');
+  }catch(e){chipText('Bâtiments non chargés (serveur occupé). Recharge la page plus tard.')}
+}
+
+/* ---------- codes postaux par quartier ----------
+   Chaque quartier reçoit un code, de gauche à droite (d'ouest en est) : 88001, 88002…
+   Une adresse prend le code du quartier le plus proche. */
+let quartiers=[],qpolys=[],qEditing=false;
+const qLayer=L.layerGroup().addTo(map);
+map.createPane('limites');map.getPane('limites').style.zIndex=420;map.getPane('limites').style.pointerEvents='none';
+const rLim=L.svg({pane:'limites'}),limLayer=L.layerGroup().addTo(map);
+const inEdges=(edges,pt)=>{let c=false;for(const[a,b]of edges){if((a.lat>pt.lat)!==(b.lat>pt.lat)){const x=a.lon+(pt.lat-a.lat)/(b.lat-a.lat)*(b.lon-a.lon);if(pt.lon<x)c=!c}}return c};
+const usePolys=()=>qpolys.length>=2;
+function quartierAt(lat,lon){
+  if(usePolys()){for(const p of qpolys)if(inEdges(p.edges,{lat,lon})){const q=quartiers.find(x=>x.name===p.name);if(q)return q}}
+  let b=null,bd=Infinity;
+  for(const q of quartiers){const d=Math.hypot((lat-q.lat)*mLat,(lon-q.lon)*mLon);if(d<bd){bd=d;b=q}}
+  return b;
+}
+function cpsOf(s){
+  if(!quartiers.length)return[];
+  const seen=new Map();
+  for(const g of s.segs)for(const p of g){const q=quartierAt(p.lat,p.lon);if(q)seen.set(q.cp,q)}
+  return[...seen.values()].sort((a,b)=>a.cp.localeCompare(b.cp));
+}
+function setQuartiers(){
+  for(const[name,v]of Object.entries(saved.qcodes)){const q=quartiers.find(x=>x.name===name);if(q){q.lat=v.lat;q.lon=v.lon}else quartiers.push({name,lat:v.lat,lon:v.lon})}
+  quartiers=quartiers.filter(q=>!saved.qdel[q.name]);
+  quartiers.sort((a,b)=>a.lon-b.lon);
+  const taken=new Set(Object.values(saved.qcodes).map(v=>v.cp));let next=88001;
+  for(const q of quartiers){q.cp=saved.qcodes[q.name]?saved.qcodes[q.name].cp:null}
+  for(const q of quartiers)if(!q.cp){while(taken.has(String(next)))next++;q.cp=String(next);taken.add(q.cp)}
+  qLayer.clearLayers();
+  for(const q of quartiers){
+    const m=L.marker([q.lat,q.lon],{interactive:qEditing,draggable:qEditing,keyboard:false,icon:L.divIcon({className:'qwrap'+(qEditing?' qdrag':''),html:`<span class="qtr">${esc(q.name)}<span class="qcp">${q.cp}</span></span>`,iconSize:null})}).addTo(qLayer);
+    if(qEditing&&m.on)m.on('dragend',()=>{const ll=m.getLatLng();saved.qcodes[q.name]={cp:q.cp,lat:+ll.lat.toFixed(6),lon:+ll.lng.toFixed(6)};persist();setQuartiers()});
+  }
+  streets.forEach(s=>s.cps=cpsOf(s));
+  drawLimits();qListRender();
+  list();if(selected){const s=streets.find(x=>x.key===selected);if(s)detail(s)}
+}
+
+/* ---------- limites des quartiers ----------
+   Si OpenStreetMap connaît les vraies limites, on les dessine. Sinon, la limite entre deux quartiers
+   passe à mi-chemin entre leurs centres (c'est aussi la règle qui donne le code postal d'une adresse).
+   On ne garde que les morceaux de limite proches des rues, pour ne pas tracer de lignes en mer. */
+function voronoiEdges(){
+  const S=quartiers.map(q=>({x:q.lon*mLon,y:q.lat*mLat}));if(S.length<2)return[];
+  let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
+  for(const s of streets)for(const g of s.segs)for(const p of g){const x=p.lon*mLon,y=p.lat*mLat;x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
+  x0-=300;x1+=300;y0-=300;y1+=300;
+  const out=[];
+  S.forEach((a,i)=>{
+    let poly=[[x0,y0],[x1,y0],[x1,y1],[x0,y1]];
+    S.forEach((b,j)=>{if(i===j||!poly.length)return;const mx=(a.x+b.x)/2,my=(a.y+b.y)/2,nx=b.x-a.x,ny=b.y-a.y,f=P=>(P[0]-mx)*nx+(P[1]-my)*ny;const np=[];
+      for(let k=0;k<poly.length;k++){const P=poly[k],Q=poly[(k+1)%poly.length],fp=f(P),fq=f(Q);if(fp<=0)np.push(P);if((fp<0&&fq>0)||(fp>0&&fq<0)){const t=fp/(fp-fq);np.push([P[0]+(Q[0]-P[0])*t,P[1]+(Q[1]-P[1])*t])}}
+      poly=np});
+    for(let k=0;k<poly.length;k++){const P=poly[k],Q=poly[(k+1)%poly.length],M=[(P[0]+Q[0])/2,(P[1]+Q[1])/2],da=Math.hypot(M[0]-a.x,M[1]-a.y);
+      const j=S.findIndex((b,jj)=>jj!==i&&Math.abs(Math.hypot(M[0]-b.x,M[1]-b.y)-da)<.5);if(j>i)out.push([P,Q])}
+  });
+  return out;
+}
+let landHash=null;
+function nearStreets(x,y){
+  if(!landHash){landHash=new Set();const add=(x,y)=>landHash.add(Math.floor(x/100)+','+Math.floor(y/100));
+    for(const s of streets)for(const g of s.segs)for(let i=1;i<g.length;i++){const A=g[i-1],B=g[i],n=Math.max(1,Math.ceil(dist(A,B)/25));for(let k=0;k<=n;k++)add((A.lon+(B.lon-A.lon)*k/n)*mLon,(A.lat+(B.lat-A.lat)*k/n)*mLat)}}
+  const cx=Math.floor(x/100),cy=Math.floor(y/100);
+  for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++)if(landHash.has((cx+dx)+','+(cy+dy)))return true;
+  return false;
+}
+function drawLimits(){
+  limLayer.clearLayers();
+  if(!limShown||!streets.length)return;
+  const halo={renderer:rLim,color:css('--plan-halo'),weight:6,opacity:.75,interactive:false,lineCap:'round'};
+  const line={renderer:rLim,color:css('--plan-quartier'),weight:2.6,opacity:.9,dashArray:'12 5 2 5',interactive:false,lineCap:'round'};
+  let segs=[];
+  if(usePolys())segs=qpolys.map(p=>p.lines.map(g=>g.map(q=>[q.lat,q.lon]))).flat();
+  else for(const[P,Q]of voronoiEdges()){
+    const n=Math.max(1,Math.ceil(Math.hypot(Q[0]-P[0],Q[1]-P[1])/20));let run=[];
+    for(let k=0;k<=n;k++){const x=P[0]+(Q[0]-P[0])*k/n,y=P[1]+(Q[1]-P[1])*k/n;if(nearStreets(x,y))run.push([y/mLat,x/mLon]);else{if(run.length>1)segs.push(run);run=[]}}
+    if(run.length>1)segs.push(run);
+  }
+  for(const g of segs){L.polyline(g,halo).addTo(limLayer);L.polyline(g,line).addTo(limLayer)}
+}
+function qListRender(){
+  const ul=$('qList');if(!ul)return;
+  ul.innerHTML=[...quartiers].sort((a,b)=>a.cp.localeCompare(b.cp)).map(q=>`<li><b>${q.cp}</b><span>${esc(q.name)}</span><button type="button" data-qdel="${esc(q.name)}">Retirer</button></li>`).join('')||'<li class="empty">Aucun quartier pour l\'instant.</li>';
+}
+$('qList').addEventListener('click',e=>{const b=e.target.closest('[data-qdel]');if(!b)return;const n=b.dataset.qdel;delete saved.qcodes[n];saved.qdel[n]=1;persist();quartiers=quartiers.filter(q=>q.name!==n);setQuartiers();chipText('Quartier « '+n+' » retiré. Ses adresses prennent le code du quartier voisin.')});
+$('qAdd').onclick=()=>{
+  const n=$('qName').value.trim();
+  if(n.length<2){chipText('Écris d\'abord le nom du quartier.');return}
+  if(quartiers.some(q=>q.name.toLowerCase()===n.toLowerCase())){chipText('Ce quartier existe déjà. Coche « Déplacer les quartiers » pour le bouger.');return}
+  picking='quartier';$('pickTxt').textContent='Clique au centre du quartier « '+n+' »';$('pickHint').hidden=false;
+};
+function addQuartier(ll){
+  const n=$('qName').value.trim();if(!n)return;
+  const taken=new Set([...quartiers.map(q=>q.cp),...Object.values(saved.qcodes).map(v=>v.cp)]);let c=88001;while(taken.has(String(c)))c++;
+  delete saved.qdel[n];saved.qcodes[n]={cp:String(c),lat:+ll.lat.toFixed(6),lon:+ll.lng.toFixed(6)};persist();
+  $('qName').value='';setQuartiers();chipText('Quartier « '+n+' » ajouté avec le code '+c+'.');
+}
+$('qEdit').addEventListener('change',e=>{qEditing=e.target.checked;setQuartiers()});
+
+/* ---------- quadrillage A1, B2… comme le Plan de Paris ----------
+   Colonnes en lettres de gauche à droite, lignes en chiffres de haut en bas, carreaux de 400 m. */
+const CELL=400;let grid=null;const gridLayer=L.layerGroup();
+function makeGrid(){
+  let a=Infinity,b=-Infinity,c=Infinity,d=-Infinity;
+  for(const s of streets)for(const g of s.segs)for(const p of g){a=Math.min(a,p.lon);b=Math.max(b,p.lon);c=Math.min(c,p.lat);d=Math.max(d,p.lat)}
+  if(!isFinite(a))return;
+  const cols=Math.ceil(((b-a)*mLon+100)/CELL),rows=Math.ceil(((d-c)*mLat+100)/CELL);
+  grid={west:a-50/mLon,north:d+50/mLat,cols,rows};
+  drawGrid();
+}
+const colName=i=>i<26?String.fromCharCode(65+i):String.fromCharCode(64+Math.floor(i/26))+String.fromCharCode(65+i%26);
+function cellAt(lat,lon){
+  if(!grid)return'';
+  const ci=Math.max(0,Math.min(grid.cols-1,Math.floor((lon-grid.west)*mLon/CELL)));
+  const ri=Math.max(0,Math.min(grid.rows-1,Math.floor((grid.north-lat)*mLat/CELL)));
+  return colName(ci)+(ri+1);
+}
+function cellsOf(s){
+  const set=new Set();
+  for(const g of s.segs)for(let i=0;i<g.length;i++){
+    set.add(cellAt(g[i].lat,g[i].lon));
+    if(i){const A=g[i-1],B=g[i],n=Math.ceil(dist(A,B)/50);for(let k=1;k<n;k++)set.add(cellAt(A.lat+(B.lat-A.lat)*k/n,A.lon+(B.lon-A.lon)*k/n))}
+  }
+  const key=c=>{const m=c.match(/^([A-Z]+)(\d+)$/);return m?[m[1].length,m[1],+m[2]]:[0,c,0]};
+  return[...set].filter(Boolean).sort((x,y)=>{const a=key(x),b=key(y);return a[0]-b[0]||a[1].localeCompare(b[1])||a[2]-b[2]});
+}
+function drawGrid(){
+  gridLayer.clearLayers();if(!grid)return;
+  const{west,north,cols,rows}=grid,east=west+cols*CELL/mLon,south=north-rows*CELL/mLat;
+  const st={color:css('--plan-quartier'),weight:1,opacity:.45,dashArray:'2 4',interactive:false};
+  for(let i=0;i<=cols;i++){const x=west+i*CELL/mLon;L.polyline([[north,x],[south,x]],st).addTo(gridLayer)}
+  for(let j=0;j<=rows;j++){const y=north-j*CELL/mLat;L.polyline([[y,west],[y,east]],st).addTo(gridLayer)}
+  const lbl=(ll,t)=>L.marker(ll,{interactive:false,keyboard:false,icon:L.divIcon({className:'qwrap',html:`<span class="gridlbl">${t}</span>`,iconSize:null})}).addTo(gridLayer);
+  for(let i=0;i<cols;i++){const x=west+(i+.5)*CELL/mLon;lbl([north+60/mLat,x],colName(i));lbl([south-60/mLat,x],colName(i))}
+  for(let j=0;j<rows;j++){const y=north-(j+.5)*CELL/mLat;lbl([y,west-60/mLon],j+1);lbl([y,east+60/mLon],j+1)}
+  showGrid();
+}
+function showGrid(){if(gridShown)gridLayer.addTo(map);else map.removeLayer(gridLayer)}
+
+/* ---------- liste ---------- */
+let view='list';
+const sortName=n=>{const m=n.match(/^(Avenue|Boulevard|Rue|Route|Place|Corniche|Impasse|Allée|Quai|Pont|Rond-Point|Autoroute|Pénétrante)\s+(?:(?:de la|du|des|de l'|de|d')\s+)?(.+)$/i);return m?{k:m[2],t:m[1]}:{k:n,t:''}};
+function list(){
+  const q=$('q').value.trim().toLowerCase();
+  if(view==='idx')return index(q);
+  const rows=[...streets].sort((a,b)=>({named:0,keep:1,todo:2}[a.mode]-{named:0,keep:1,todo:2}[b.mode])||(b.len-a.len))
+    .filter(s=>!q||label(s).toLowerCase().includes(q)||(s.oldName||'').toLowerCase().includes(q)||(s.pid&&(byId[s.pid].cat+' '+(byId[s.pid].pays||'Guinée')).toLowerCase().includes(q)));
+  $('list').innerHTML=rows.slice(0,400).map(s=>`<li><button type="button" data-k="${esc(s.key)}" class="${s.key===selected?'sel':''}"><span class="dot" style="background:${color(s)}"></span><span class="n">${esc(label(s))}<small>${s.oldName?'Avant : '+esc(s.oldName):'Sans nom sur la carte'}</small></span><span class="m">${Math.round(s.len)} m</span></button></li>`).join('')||'<li class="empty" style="padding:8px">Aucune rue trouvée.</li>';
+}
+function index(q){
+  const rows=streets.filter(s=>s.mode!=='todo').map(s=>{const n=label(s),o=sortName(n);return{s,n,k:o.k,t:o.t}})
+    .filter(r=>!q||r.n.toLowerCase().includes(q)||r.s.cells.some(c=>c.toLowerCase()===q)||r.s.cps.some(c=>c.cp.includes(q)))
+    .sort((a,b)=>a.k.localeCompare(b.k,'fr',{sensitivity:'base'}));
+  let html='',cur='';
+  for(const r of rows){
+    const L0=r.k.normalize('NFD').replace(/[\u0300-\u036f]/g,'').charAt(0).toUpperCase();
+    if(L0!==cur){cur=L0;html+=`<li class="letter">${esc(L0)}</li>`}
+    html+=`<li><button type="button" class="idx${r.s.key===selected?' sel':''}" data-k="${esc(r.s.key)}"><span>${esc(r.k)}${r.t?` <em>(${esc(r.t)})</em>`:''}</span><span class="c">${r.s.cells.join(' ')}<br>${(r.s.cps.map(c=>c.cp).join(' '))||CP}</span></button></li>`;
+  }
+  $('list').innerHTML=html||'<li class="empty" style="padding:8px">Aucune rue trouvée.</li>';
+}
+for(const[id,v]of[['tabList','list'],['tabIdx','idx']])$(id).addEventListener('click',()=>{view=v;$('tabList').classList.toggle('on',v==='list');$('tabIdx').classList.toggle('on',v==='idx');list()});
+$('list').addEventListener('click',e=>{const b=e.target.closest('button[data-k]');if(b)select(b.dataset.k,true)});
+$('q').addEventListener('input',list);
+$('renameAll').checked=!!saved.renameAll;
+$('renameAll').addEventListener('change',e=>{saved.renameAll=e.target.checked;persist();assign()});
+
+function counts(){
+  $('cNamed').textContent=streets.filter(s=>s.mode==='named').length;
+  $('cKeep').textContent=streets.filter(s=>s.mode==='keep').length;
+  $('cTodo').textContent=streets.filter(s=>s.mode==='todo').length;
+}
+
+/* ---------- sélection et détail ---------- */
+function select(key,fly){
+  selected=key;const s=streets.find(x=>x.key===key);if(!s)return;
+  draw();list();detail(s);
+  if(fly){const pl=lines.get(key);if(pl)map.fitBounds(pl.getBounds(),{maxZoom:17,padding:[40,40]})}
+}
+function detail(s){
+  const p=s.pid?byId[s.pid]:null;
+  const usedBy=pid=>streets.find(x=>x.pid===pid&&x.key!==s.key);
+  const opts=P.map(x=>{const u=usedBy(x.id);return `<option value="${x.id}" ${s.pid===x.id?'selected':''}>${esc(x.name)}${u?' (déjà sur une autre rue)':''}</option>`}).join('');
+  $('detail').innerHTML=`
+    <div class="eyebrow">${s.mode==='named'?(saved.over[s.key]?'Nom choisi':'Nom proposé'):s.mode==='keep'?'Nom actuel conservé':'Rue sans nom'}</div>
+    <h2>${esc(label(s))}</h2>
+    ${p?`<div class="chips"><span class="chip">${esc(p.pays||'Guinée')}</span><span class="chip">${esc(p.cat)}</span><span class="chip">${esc(p.dates)}</span></div><p class="bio">${esc(p.bio)}</p>`:''}
+    <div class="kv"><span>Avant</span><b>${s.oldName?esc(s.oldName):'Sans nom sur la carte'}</b><span>Longueur</span><b>${Math.round(s.len)} m</b><span>Type de voie</span><b>${esc(s.highway)}</b><span>Numéros</span><b>1 à ${s.maxNo}, ${s.fromTxt}</b><span>Code postal</span><b>${s.cps.map(c=>c.cp+' '+esc(c.name)).join(', ')||CP}</b><span>Carreaux</span><b>${s.cells.join(', ')}</b></div>
+    ${plaqueBlock(s)}
+    ${s.mode!=='todo'?`<div class="addr">Exemple d'adresse :<br><b>12, ${esc(label(s))}</b><br>${(s.cps[0]||{cp:CP}).cp} Kaloum, Conakry</div>`:''}
+    <label for="pick">Honorer une personnalité</label>
+    <select id="pick"><option value="">— Choisir —</option>${opts}</select>
+    <label for="custom">Ou écrire un autre nom</label>
+    <input type="text" id="custom" placeholder="Ex. : Rue Aïssatou Sow" value="${esc(s.custom||'')}">
+    <div class="row"><button class="btn primary" type="button" id="apply">Appliquer</button>${saved.over[s.key]?'<button class="btn" type="button" id="reset">Revenir à la proposition</button>':''}</div>
+    ${circBlock(s)}`;
+  bindCirc(s);bindPlaque(s);
+  $('apply').onclick=()=>{
+    const pid=$('pick').value,custom=$('custom').value.trim();
+    if(custom){saved.over[s.key]={custom}}
+    else if(pid){for(const k in saved.over)if(saved.over[k].pid===pid&&k!==s.key)delete saved.over[k];saved.over[s.key]={pid}}
+    else return;
+    persist();assign();
+  };
+  const r=$('reset');if(r)r.onclick=()=>{delete saved.over[s.key];persist();assign()};
+}
+
+function circText(s){
+  const{c,src}=circOf(s);
+  if(c==='osm')return'Sens unique existant (déjà connu)';
+  if(!c)return src==='choix'?'Double sens (ton choix)':'Double sens';
+  const[dx,dy]=s.vec,t='Sens unique '+vers(dx*c,dy*c);
+  return src==='choix'?t+' (ton choix)':t+' (proposition)';
+}
+function circBlock(s){
+  const[dx,dy]=s.vec,o=saved.dir[s.key];
+  return`<div class="circ"><div class="eyebrow">Circulation</div><p class="bio" style="margin:4px 0 6px"><b>${esc(circText(s))}</b></p>
+    <div class="row"><button class="btn${o===1?' on':''}" type="button" data-dir="1">Sens unique ${vers(dx,dy)}</button><button class="btn${o===-1?' on':''}" type="button" data-dir="-1">Sens unique ${vers(-dx,-dy)}</button><button class="btn${o===0?' on':''}" type="button" data-dir="0">Double sens</button>${o!==undefined?'<button class="btn" type="button" data-dir="auto">Revenir à la proposition</button>':''}</div></div>`;
+}
+function bindCirc(s){
+  $('detail').querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{
+    const v=b.dataset.dir;if(v==='auto')delete saved.dir[s.key];else saved.dir[s.key]=+v;
+    persist();if(!circShown){circShown=true;const c=document.getElementById('circOn');if(c)c.checked=true;try{localStorage.setItem(STORE+'-circ','1')}catch(_){}}
+    drawCirc();detail(s);
+  });
+}
+
+/* ---------- figer le plan et référentiel ---------- */
+function updFrozen(){
+  const c=$('frozenChip');if(!c)return;
+  if(saved.frozenAt){c.textContent='Plan figé le '+new Date(saved.frozenAt).toLocaleDateString('fr-FR');c.classList.add('on');$('freezeBtn').textContent='Figer à nouveau'}
+  else{c.textContent='Plan non figé';c.classList.remove('on')}
+}
+$('freezeBtn').onclick=()=>{
+  if(!streets.length)return;
+  for(const s of streets){
+    if(!saved.over[s.key]){if(s.mode==='named'&&s.pid)saved.over[s.key]={pid:s.pid};else if(s.mode==='named'&&s.custom)saved.over[s.key]={custom:s.custom};else if(s.mode==='keep')saved.over[s.key]={keep:true}}
+    saved.start[s.key]=[+s.chain[0].lat.toFixed(6),+s.chain[0].lon.toFixed(6)];
+  }
+  for(const q of quartiers)saved.qcodes[q.name]={cp:q.cp,lat:+q.lat.toFixed(6),lon:+q.lon.toFixed(6)};
+  saved.frozenAt=new Date().toISOString();persist();assign();
+  chipText('Plan figé : noms, codes postaux et numérotation ne bougeront plus. Pense à « Enregistrer » le référentiel.');
+};
+$('refOut').onclick=()=>{
+  const ref={app:'rues-de-kaloum',version:1,date:new Date().toISOString(),frozenAt:saved.frozenAt||null,over:saved.over,qcodes:saved.qcodes,start:saved.start,dir:saved.dir,qdel:saved.qdel,extra:saved.extra,renameAll:!!saved.renameAll};
+  const blob=new Blob([JSON.stringify(ref,null,1)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='referentiel-kaloum.json';document.body.appendChild(a);a.click();a.remove();
+};
+$('refIn').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  f.text().then(t=>{
+    const r=JSON.parse(t);if(r.app!=='rues-de-kaloum')throw new Error('format');
+    Object.assign(saved,{over:r.over||{},qcodes:r.qcodes||{},start:r.start||{},dir:r.dir||{},qdel:r.qdel||{},extra:r.extra||[],renameAll:!!r.renameAll,frozenAt:r.frozenAt||null});
+    persist();syncP();$('renameAll').checked=saved.renameAll;
+    streets.forEach(chainOf);computeCirculation();setQuartiers();assign();
+    chipText('Référentiel ouvert : '+Object.keys(saved.over).length+' rues.');
+  }).catch(()=>chipText("Ce fichier n'est pas un référentiel de la carte de Kaloum."));
+  e.target.value='';
+};
+
+/* ---------- export GeoJSON pour le module Adresse ---------- */
+$('exportBtn').onclick=()=>{
+  if(!streets.length)return;
+  const fc={type:'FeatureCollection',features:streets.map(s=>({type:'Feature',
+    properties:{nom:s.mode==='todo'?null:label(s),personnalite:s.pid?byId[s.pid].name:null,ancien_nom:s.oldName||null,
+      statut:s.mode==='named'?'propose':s.mode==='keep'?'conserve':'a_nommer',codes_postaux:s.cps.length?s.cps.map(c=>c.cp):[CP],quartiers:s.cps.map(c=>c.name),carreaux:s.cells,commune:'Kaloum',ville:'Conakry',sens_numerotation:s.fromTxt,numero_depart:s.chain[0]?[+s.chain[0].lon.toFixed(6),+s.chain[0].lat.toFixed(6)]:null,circulation:circText(s),numero_max:s.maxNo,type_voie:s.highway,longueur_m:Math.round(s.len),osm_ids:s.ids},
+    geometry:{type:'MultiLineString',coordinates:s.segs.map(g=>g.map(p=>[+p.lon.toFixed(6),+p.lat.toFixed(6)]))}}))};
+  const blob=new Blob([JSON.stringify(fc,null,1)],{type:'application/geo+json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='rues-kaloum.geojson';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+};
+$('exportCsvBtn').onclick=()=>{
+  if(!streets.length)return;
+  const quote=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+  /* Colonnes « latitude/longitude » à virgule pour Excel en français,
+     colonnes « lat/lon » à point pour le C#, QGIS et les bases de données. */
+  const rows=[['numero','voie','cle_voie','code_postal_propose','quartier_propose','carreau','latitude','longitude','lat','lon','cote','chaussee','statut_nom','osm_ids']];
+  for(const s of streets){
+    const seen=new Set();
+    const push=(no,left,lat,lon,qlat,qlon,chaussee)=>{
+      const id=no+(chaussee==='principale'?'':'p');if(seen.has(id))return;seen.add(id);
+      const q=quartierAt(qlat,qlon);
+      rows.push([no,s.mode==='todo'?'Rue à nommer':label(s),s.key,q?q.cp:CP,q?q.name:'',cellAt(lat,lon),lat.toFixed(6).replace('.',','),lon.toFixed(6).replace('.',','),lat.toFixed(6),lon.toFixed(6),left?'gauche':'droite',chaussee,s.mode==='named'?'proposition':s.mode==='keep'?'nom OSM conservé':'à nommer',s.ids.join('|')]);
+    };
+    /* chaussée principale : le tracé de numérotation */
+    for(let k=STEP/2;k<s.total;k+=STEP){
+      const P=pointAt(s,k);if(P.jump)continue;
+      for(const left of[true,false]){
+        const x=P.x+(left?-P.uy:P.uy)*7,y=P.y+(left?P.ux:-P.ux)*7;
+        push(houseNo(k,left),left,y/mLat,x/mLon,P.y/mLat,P.x/mLon,'principale');
+      }
+    }
+    /* chaussées parallèles (avenues à deux chaussées) : numéros pris sur la chaussée principale en face */
+    for(const g of s.segs){
+      const mid=g[Math.floor(g.length/2)],rm=refOn(s,mid.lat,mid.lon);
+      if(!rm||rm.dist<2)continue;
+      for(let i=1;i<g.length;i++){
+        const ax=g[i-1].lon*mLon,ay=g[i-1].lat*mLat,vx=g[i].lon*mLon-ax,vy=g[i].lat*mLat-ay,len=Math.hypot(vx,vy);if(len<5)continue;
+        const ux=vx/len,uy=vy/len;
+        for(let k=STEP/2;k<len;k+=STEP){
+          const cx=ax+ux*k,cy=ay+uy*k;
+          for(const side of[1,-1]){
+            const x=cx-uy*7*side,y=cy+ux*7*side,r=refOn(s,y/mLat,x/mLon);if(!r)continue;
+            push(houseNo(r.d,r.left),r.left,y/mLat,x/mLon,cy/mLat,cx/mLon,'parallèle');
+          }
+        }
+      }
+    }
+  }
+  const csv='\ufeff'+rows.map(r=>r.map(quote).join(';')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='adresses-simulees-kaloum.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  chipText('Export CSV créé : '+(rows.length-1).toLocaleString('fr-FR')+' adresses simulées. Les points sont théoriques, à valider sur le terrain.');
+};
+$('refreshOsmBtn').onclick=()=>{
+  const msg='Récupérer à nouveau les rues, bâtiments et quartiers depuis OpenStreetMap ?\n\n'
+    +(saved.frozenAt?'Ton plan est figé. Pense d\'abord à « Enregistrer » le référentiel : si des rues ont changé sur OpenStreetMap, certaines pourraient perdre leur nom figé.\n\n':'')
+    +'Une copie des données actuelles est gardée : si le serveur ne répond pas, elle sera restaurée.';
+  if(!confirm(msg))return;
+  try{
+    for(const k of['-osm','-extra']){const v=localStorage.getItem(STORE+k);if(v)localStorage.setItem(STORE+k+'-backup',v);localStorage.removeItem(STORE+k)}
+    localStorage.setItem(STORE+'-oldkeys',JSON.stringify(streets.map(s=>s.key)));
+  }catch(e){}
+  location.reload();
+};
+/* après une actualisation : ce qui a changé, et les noms figés qui ne trouvent plus leur rue */
+function refreshReport(){
+  let old=null;try{old=JSON.parse(localStorage.getItem(STORE+'-oldkeys')||'null');localStorage.removeItem(STORE+'-oldkeys');localStorage.removeItem(STORE+'-osm-backup')}catch(e){}
+  if(!old)return;
+  const now=new Set(streets.map(s=>s.key)),before=new Set(old);
+  const added=[...now].filter(k=>!before.has(k)),gone=[...before].filter(k=>!now.has(k));
+  const orphan=Object.keys(saved.over).filter(k=>!now.has(k));
+  const parts=[`Rues mises à jour : ${added.length} nouvelle${added.length>1?'s':''}, ${gone.length} disparue${gone.length>1?'s':''}.`];
+  if(orphan.length)parts.push(`${orphan.length} nom${orphan.length>1?'s':''} figé${orphan.length>1?'s':''} ne trouve${orphan.length>1?'nt':''} plus sa rue : vérifie avant de figer à nouveau.`);
+  else if(!added.length&&!gone.length)parts.push('Aucun changement.');
+  chipText(parts.join(' '));
+  if(orphan.length)console.warn('Noms figés sans rue après actualisation :',orphan);
+}
+
+$('npAdd').onclick=()=>{
+  const name=$('npName').value.trim();
+  if(name.length<3){$('npMsg').textContent='Écris au moins le nom.';return}
+  if(P.some(p=>p.name.toLowerCase()===name.toLowerCase())){$('npMsg').textContent='Déjà dans la liste.';return}
+  saved.extra.push({id:'x'+Date.now(),name,dates:$('npDates').value.trim()||'—',cat:'Ajout personnel',bio:$('npBio').value.trim()||'Personnalité ajoutée par toi.'});
+  persist();syncP();
+  ['npName','npDates','npBio'].forEach(i=>$(i).value='');
+  $('npMsg').textContent=name+' ajouté(e). Une rue sans nom lui est attribuée.';
+  assign();
+};
+load();
+})();
+</script>
+</body>
+</html>

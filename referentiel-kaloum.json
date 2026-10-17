@@ -1,0 +1,825 @@
+{
+ "app": "rues-de-kaloum",
+ "version": 1,
+ "date": "2026-10-17T06:11:04.625Z",
+ "frozenAt": "2026-10-17T06:10:08.453Z",
+ "over": {
+  "n:Boulevard de la Nation": {
+   "pid": "samory"
+  },
+  "n:Avenue du Port": {
+   "pid": "alfayaya"
+  },
+  "n:Rue KA. 062": {
+   "pid": "olympio"
+  },
+  "n:Avenue du 25 Août 1958": {
+   "pid": "achebe"
+  },
+  "n:5e Avenue": {
+   "pid": "sankara"
+  },
+  "n:Avenue M'Balia Camara": {
+   "pid": "waligoumba"
+  },
+  "n:3e Avenue": {
+   "pid": "cheikhanta"
+  },
+  "n:Avenue de la République": {
+   "pid": "bokarbiro"
+  },
+  "n:Boulevard Ahmed Sekou Touré": {
+   "pid": "sorymawdo"
+  },
+  "n:1er Avenue": {
+   "pid": "mamadykeita"
+  },
+  "n:Boulevard Diallo Telly": {
+   "pid": "keletigui"
+  },
+  "n:Avenue Colonel Binta Pillote Diallo": {
+   "pid": "siradiou"
+  },
+  "n:1er Boulevard": {
+   "pid": "modibo"
+  },
+  "n:Rue KA 002": {
+   "pid": "farka"
+  },
+  "n:Avenue Hadja Aissatou Mofory Bangoura": {
+   "pid": "abdelkader"
+  },
+  "n:2e Avenue": {
+   "pid": "alinesitoe"
+  },
+  "n:Avenue William Tubman": {
+   "pid": "mandela"
+  },
+  "n:9e Avenue": {
+   "pid": "nzinga"
+  },
+  "n:Rond-Point du Port": {
+   "pid": "dinahsalifou"
+  },
+  "n:Avenue de la Gare": {
+   "pid": "nyerere"
+  },
+  "n:Rue KA. 040": {
+   "pid": "senghor"
+  },
+  "n:Rue KA. 028": {
+   "pid": "rosaparks"
+  },
+  "n:Avenue Louis Lansana Beavogui": {
+   "pid": "ahmedbaba"
+  },
+  "n:Avenue du 5 Septembre 2021": {
+   "pid": "ibnbattuta"
+  },
+  "n:11e Avenue": {
+   "pid": "mombeya"
+  },
+  "n:11e Boulevard": {
+   "pid": "morykante"
+  },
+  "n:Rue KA. 048": {
+   "pid": "toussaint"
+  },
+  "n:Rue KA. 052": {
+   "pid": "mlk"
+  },
+  "n:9e Boulevard": {
+   "pid": "boganda"
+  },
+  "n:Rue KA. 074": {
+   "pid": "maathai"
+  },
+  "n:Rue KA.068": {
+   "pid": "salifkeita"
+  },
+  "n:Rue KA. 082": {
+   "pid": "tubman"
+  },
+  "n:Rue KA. 049": {
+   "pid": "fanon"
+  },
+  "n:Rue KA. 084": {
+   "pid": "fela"
+  },
+  "n:Rue KA. 051": {
+   "pid": "sirleaf"
+  },
+  "n:Boulevard Général Lansana Conté": {
+   "pid": "camaralaye"
+  },
+  "n:10e Boulevard": {
+   "pid": "yacine"
+  },
+  "n:Boulevard Maritime": {
+   "pid": "soundiata"
+  },
+  "n:Corniche Sud": {
+   "pid": "fodeba"
+  },
+  "n:Autoroute Fidel Castro": {
+   "pid": "mbalia"
+  },
+  "n:Rond-Point Samory Touré": {
+   "pid": "diallotelli"
+  },
+  "n:le Niger": {
+   "pid": "wandel"
+  },
+  "n:4e Avenue": {
+   "pid": "hampate"
+  },
+  "n:Pont du 8 Novembre": {
+   "pid": "jeannemartin"
+  },
+  "n:Rue KA. 045": {
+   "pid": "etoo"
+  },
+  "n:Avenue Hadja Saran Daraba": {
+   "pid": "saifoulaye"
+  },
+  "n:Rue KA. 034": {
+   "pid": "drogba"
+  },
+  "n:Rue KA. 036": {
+   "pid": "newton"
+  },
+  "n:Rue KA. 088": {
+   "pid": "mansamoussa"
+  },
+  "n:Avenue Docteur Rober Accar Nadjib": {
+   "pid": "annan"
+  },
+  "n:7e Avenue": {
+   "pid": "gurnah"
+  },
+  "n:Boulevard de Boulbinet": {
+   "pid": "demba"
+  },
+  "n:Avenue du 3 Avril 1984": {
+   "pid": "asantewaa"
+  },
+  "n:Rue KA. 042": {
+   "pid": "avicenne"
+  },
+  "n:Avenue Hadja Rabiatou Serah Diallo": {
+   "pid": "tutu"
+  },
+  "n:Rond-Point de Nimba": {
+   "pid": "mafory"
+  },
+  "n:Avenue du 1er Mars 1960": {
+   "pid": "funmilayo"
+  },
+  "n:Pénétrante du Port Autonome de Conakry": {
+   "pid": "sassine"
+  },
+  "n:AVENUE Dinah Salifou": {
+   "pid": "mariamaba"
+  },
+  "n:Avenue Général Noumandjan Kéita": {
+   "pid": "fantamady"
+  },
+  "u:38664159": {
+   "pid": "biko"
+  },
+  "u:38664205": {
+   "pid": "manu"
+  },
+  "u:38698400": {
+   "pid": "mane"
+  },
+  "u:38698407": {
+   "pid": "saro"
+  },
+  "u:38698453": {
+   "pid": "dubois"
+  },
+  "u:38698455": {
+   "pid": "cesaire"
+  },
+  "u:38698544": {
+   "pid": "ngugi"
+  },
+  "u:38698552": {
+   "pid": "sembene"
+  },
+  "u:38698553": {
+   "pid": "youssou"
+  },
+  "u:38698560": {
+   "pid": "adichie"
+  },
+  "u:38698561": {
+   "pid": "baldwin"
+  },
+  "u:38893882": {
+   "pid": "hugo"
+  },
+  "u:38895173": {
+   "pid": "ibnkhaldoun"
+  },
+  "u:217952237": {
+   "pid": "galilee"
+  },
+  "u:217967228": {
+   "pid": "gandhi"
+  },
+  "u:269867009": {
+   "pid": "umnyobe"
+  },
+  "u:269867015": {
+   "pid": "pasteur"
+  },
+  "u:269867017": {
+   "pid": "khwarizmi"
+  },
+  "u:269867023": {
+   "pid": "kidjo"
+  },
+  "u:270579425": {
+   "pid": "papabouba"
+  },
+  "u:291395358": {
+   "pid": "kandia"
+  },
+  "u:291504351": {
+   "pid": "douglass"
+  },
+  "u:338615025": {
+   "pid": "angelou"
+  },
+  "u:364654187": {
+   "pid": "bolivar"
+  },
+  "u:376491013": {
+   "pid": "vinci"
+  },
+  "u:376491014": {
+   "pid": "tolstoi"
+  },
+  "u:441776076": {
+   "pid": "morrison"
+  },
+  "u:448572357": {
+   "pid": "cesaria"
+  },
+  "u:550013248": {
+   "pid": "mukwege"
+  },
+  "u:550013254": {
+   "pid": "soyinka"
+  },
+  "u:636060853": {
+   "pid": "einstein"
+  },
+  "u:690223571": {
+   "pid": "niane"
+  },
+  "u:827899928": {
+   "pid": "curie"
+  },
+  "u:914338675": {
+   "pid": "monenembo"
+  },
+  "u:919187263": {
+   "pid": "picasso"
+  },
+  "u:963538973": {
+   "pid": "shakespeare"
+  },
+  "u:1107646371": {
+   "pid": "neruda"
+  },
+  "u:1138157900": {
+   "pid": "nkrumah"
+  },
+  "u:1138157901": {
+   "pid": "cabral"
+  },
+  "u:1138157908": {
+   "pid": "makeba"
+  },
+  "u:1138157909": {
+   "pid": "omartall"
+  },
+  "u:1201571646": {
+   "pid": "malcolmx"
+  },
+  "u:1201571647": {
+   "pid": "garvey"
+  },
+  "u:1317168767": {
+   "pid": "nsoumer"
+  },
+  "u:1382059503": {
+   "pid": "moliere"
+  },
+  "u:1384107317": {
+   "pid": "garciamarquez"
+  },
+  "u:1384107318": {
+   "pid": "rumi"
+  },
+  "u:1463606917": {
+   "pid": "lumumba"
+  },
+  "u:1517534782": {
+   "pid": "karamokoalfa"
+  }
+ },
+ "qcodes": {
+  "Almamiya": {
+   "cp": "88001",
+   "lat": 9.510468,
+   "lon": -13.711324
+  },
+  "Manquepas": {
+   "cp": "88002",
+   "lat": 9.507721,
+   "lon": -13.709694
+  },
+  "Cité Petit Bateau": {
+   "cp": "88003",
+   "lat": 9.518517,
+   "lon": -13.702514
+  }
+ },
+ "start": {
+  "n:Boulevard de la Nation": [
+   9.508907,
+   -13.710354
+  ],
+  "n:Avenue du Port": [
+   9.515367,
+   -13.713946
+  ],
+  "n:Rue KA. 062": [
+   9.515005,
+   -13.705829
+  ],
+  "n:Avenue du 25 Août 1958": [
+   9.508936,
+   -13.710448
+  ],
+  "n:5e Avenue": [
+   9.509627,
+   -13.718804
+  ],
+  "n:Avenue M'Balia Camara": [
+   9.504746,
+   -13.714156
+  ],
+  "n:3e Avenue": [
+   9.507823,
+   -13.717727
+  ],
+  "n:Avenue de la République": [
+   9.509647,
+   -13.714968
+  ],
+  "n:Boulevard Ahmed Sekou Touré": [
+   9.515039,
+   -13.713841
+  ],
+  "n:1er Avenue": [
+   9.50706,
+   -13.719311
+  ],
+  "n:Boulevard Diallo Telly": [
+   9.503834,
+   -13.708053
+  ],
+  "n:Avenue Colonel Binta Pillote Diallo": [
+   9.504746,
+   -13.714156
+  ],
+  "n:1er Boulevard": [
+   9.505112,
+   -13.718254
+  ],
+  "n:Rue KA 002": [
+   9.504884,
+   -13.717137
+  ],
+  "n:Avenue Hadja Aissatou Mofory Bangoura": [
+   9.503917,
+   -13.709753
+  ],
+  "n:2e Avenue": [
+   9.506889,
+   -13.71552
+  ],
+  "n:Avenue William Tubman": [
+   9.512074,
+   -13.718317
+  ],
+  "n:9e Avenue": [
+   9.513127,
+   -13.717792
+  ],
+  "n:Rond-Point du Port": [
+   9.515081,
+   -13.714104
+  ],
+  "n:Avenue de la Gare": [
+   9.513811,
+   -13.714169
+  ],
+  "n:Rue KA. 040": [
+   9.512801,
+   -13.712749
+  ],
+  "n:Rue KA. 028": [
+   9.510874,
+   -13.714732
+  ],
+  "n:Avenue Louis Lansana Beavogui": [
+   9.504884,
+   -13.717137
+  ],
+  "n:Avenue du 5 Septembre 2021": [
+   9.509899,
+   -13.716194
+  ],
+  "n:11e Avenue": [
+   9.513611,
+   -13.706112
+  ],
+  "n:11e Boulevard": [
+   9.511063,
+   -13.701444
+  ],
+  "n:Rue KA. 048": [
+   9.51227,
+   -13.702886
+  ],
+  "n:Rue KA. 052": [
+   9.513701,
+   -13.702553
+  ],
+  "n:9e Boulevard": [
+   9.513281,
+   -13.704398
+  ],
+  "n:Rue KA. 074": [
+   9.516431,
+   -13.703763
+  ],
+  "n:Rue KA.068": [
+   9.516363,
+   -13.705568
+  ],
+  "n:Rue KA. 082": [
+   9.517294,
+   -13.69853
+  ],
+  "n:Rue KA. 049": [
+   9.517074,
+   -13.696926
+  ],
+  "n:Rue KA. 084": [
+   9.517641,
+   -13.697274
+  ],
+  "n:Rue KA. 051": [
+   9.517481,
+   -13.69536
+  ],
+  "n:Boulevard Général Lansana Conté": [
+   9.506299,
+   -13.715635
+  ],
+  "n:10e Boulevard": [
+   9.510399,
+   -13.703269
+  ],
+  "n:Boulevard Maritime": [
+   9.50706,
+   -13.719311
+  ],
+  "n:Corniche Sud": [
+   9.514103,
+   -13.700871
+  ],
+  "n:Autoroute Fidel Castro": [
+   9.520326,
+   -13.694583
+  ],
+  "n:Rond-Point Samory Touré": [
+   9.524393,
+   -13.68657
+  ],
+  "n:le Niger": [
+   9.524126,
+   -13.686652
+  ],
+  "n:4e Avenue": [
+   9.508616,
+   -13.717567
+  ],
+  "n:Pont du 8 Novembre": [
+   9.525216,
+   -13.688005
+  ],
+  "n:Rue KA. 045": [
+   9.513881,
+   -13.699845
+  ],
+  "n:Avenue Hadja Saran Daraba": [
+   9.502619,
+   -13.713322
+  ],
+  "n:Rue KA. 034": [
+   9.511041,
+   -13.710047
+  ],
+  "n:Rue KA. 036": [
+   9.510415,
+   -13.706647
+  ],
+  "n:Rue KA. 088": [
+   9.513192,
+   -13.70394
+  ],
+  "n:Avenue Docteur Rober Accar Nadjib": [
+   9.505132,
+   -13.706014
+  ],
+  "n:7e Avenue": [
+   9.510843,
+   -13.717149
+  ],
+  "n:Boulevard de Boulbinet": [
+   9.507951,
+   -13.704279
+  ],
+  "n:Avenue du 3 Avril 1984": [
+   9.51041,
+   -13.714821
+  ],
+  "n:Rue KA. 042": [
+   9.513981,
+   -13.715296
+  ],
+  "n:Avenue Hadja Rabiatou Serah Diallo": [
+   9.504219,
+   -13.711435
+  ],
+  "n:Rond-Point de Nimba": [
+   9.520326,
+   -13.694583
+  ],
+  "n:Avenue du 1er Mars 1960": [
+   9.509327,
+   -13.713467
+  ],
+  "n:Pénétrante du Port Autonome de Conakry": [
+   9.516648,
+   -13.715424
+  ],
+  "n:AVENUE Dinah Salifou": [
+   9.509077,
+   -13.711964
+  ],
+  "n:Avenue Général Noumandjan Kéita": [
+   9.508266,
+   -13.704448
+  ],
+  "u:38664159": [
+   9.505429,
+   -13.714237
+  ],
+  "u:38664205": [
+   9.50719,
+   -13.712348
+  ],
+  "u:38698400": [
+   9.511645,
+   -13.703016
+  ],
+  "u:38698407": [
+   9.510727,
+   -13.70234
+  ],
+  "u:38698453": [
+   9.514826,
+   -13.71234
+  ],
+  "u:38698455": [
+   9.514546,
+   -13.710845
+  ],
+  "u:38698544": [
+   9.515934,
+   -13.70565
+  ],
+  "u:38698552": [
+   9.517374,
+   -13.70362
+  ],
+  "u:38698553": [
+   9.51547,
+   -13.705739
+  ],
+  "u:38698560": [
+   9.513774,
+   -13.699266
+  ],
+  "u:38698561": [
+   9.515039,
+   -13.699629
+  ],
+  "u:38846681": [
+   9.524527,
+   -13.686951
+  ],
+  "u:38893882": [
+   9.517926,
+   -13.701786
+  ],
+  "u:38895173": [
+   9.505112,
+   -13.718254
+  ],
+  "u:174022129": [
+   9.524121,
+   -13.686288
+  ],
+  "u:217952237": [
+   9.51555,
+   -13.697315
+  ],
+  "u:217967228": [
+   9.508487,
+   -13.719023
+  ],
+  "u:269867009": [
+   9.513243,
+   -13.704201
+  ],
+  "u:269867015": [
+   9.514004,
+   -13.704261
+  ],
+  "u:269867017": [
+   9.516217,
+   -13.698784
+  ],
+  "u:269867023": [
+   9.516022,
+   -13.698658
+  ],
+  "u:270579425": [
+   9.514695,
+   -13.700772
+  ],
+  "u:291395356": [
+   9.524217,
+   -13.686675
+  ],
+  "u:291395358": [
+   9.524902,
+   -13.687627
+  ],
+  "u:291504351": [
+   9.510611,
+   -13.713187
+  ],
+  "u:338615025": [
+   9.513987,
+   -13.698647
+  ],
+  "u:364654187": [
+   9.507751,
+   -13.719173
+  ],
+  "u:376491013": [
+   9.518741,
+   -13.694206
+  ],
+  "u:376491014": [
+   9.518589,
+   -13.693757
+  ],
+  "u:441776076": [
+   9.518125,
+   -13.693377
+  ],
+  "u:448572357": [
+   9.522372,
+   -13.690672
+  ],
+  "u:550013247": [
+   9.5171,
+   -13.704641
+  ],
+  "u:550013248": [
+   9.517325,
+   -13.705077
+  ],
+  "u:550013254": [
+   9.518002,
+   -13.702171
+  ],
+  "u:551360786": [
+   9.518741,
+   -13.694206
+  ],
+  "u:636060853": [
+   9.517113,
+   -13.696286
+  ],
+  "u:690223569": [
+   9.524902,
+   -13.687627
+  ],
+  "u:690223571": [
+   9.525216,
+   -13.688005
+  ],
+  "u:827899928": [
+   9.516619,
+   -13.704726
+  ],
+  "u:914338675": [
+   9.520294,
+   -13.694895
+  ],
+  "u:919187263": [
+   9.514215,
+   -13.698229
+  ],
+  "u:963538973": [
+   9.516665,
+   -13.695994
+  ],
+  "u:1107646371": [
+   9.510753,
+   -13.706577
+  ],
+  "u:1138157900": [
+   9.518194,
+   -13.706024
+  ],
+  "u:1138157901": [
+   9.517878,
+   -13.706571
+  ],
+  "u:1138157908": [
+   9.518014,
+   -13.706221
+  ],
+  "u:1138157909": [
+   9.517878,
+   -13.706571
+  ],
+  "u:1201571645": [
+   9.515341,
+   -13.697962
+  ],
+  "u:1201571646": [
+   9.514215,
+   -13.698229
+  ],
+  "u:1201571647": [
+   9.514293,
+   -13.698643
+  ],
+  "u:1317168767": [
+   9.510399,
+   -13.703269
+  ],
+  "u:1382059503": [
+   9.511014,
+   -13.703147
+  ],
+  "u:1384107317": [
+   9.504777,
+   -13.718316
+  ],
+  "u:1384107318": [
+   9.50454,
+   -13.71836
+  ],
+  "u:1462517077": [
+   9.504856,
+   -13.713637
+  ],
+  "u:1463606917": [
+   9.514039,
+   -13.715312
+  ],
+  "u:1517534782": [
+   9.508759,
+   -13.710496
+  ]
+ },
+ "dir": {},
+ "extra": [],
+ "renameAll": true
+}
