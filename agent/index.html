@@ -51,6 +51,8 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:900;backgrou
 .hleft.center{align-items:center;text-align:center}
 .eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--brand-pale)}
 .agentname{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.agentbtn{all:unset;cursor:pointer;display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px;font-weight:500;text-decoration:underline;text-decoration-color:rgba(255,255,255,.35);text-underline-offset:3px}
+.agentbtn:focus-visible{outline:2px solid var(--signal)}
 .hright{display:flex;align-items:center;gap:6px;justify-content:flex-end;min-width:44px}
 .iconbtn{all:unset;cursor:pointer;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:10px;color:var(--brand-ink)}
 .iconbtn.back{margin-left:-12px}
@@ -190,7 +192,7 @@ legend{font-size:14px;font-weight:600;padding:0;margin-bottom:6px}
     </button>
     <div class="hleft" id="hLeft">
       <span class="eyebrow" id="eyebrow">Prototype · Kaloum</span>
-      <span class="agentname" id="agentLabel">Agent non renseigné</span>
+      <button type="button" class="agentname agentbtn" id="agentLabel" aria-label="Changer d'agent">Agent non renseigné</button>
     </div>
     <div class="hright">
       <button type="button" class="iconbtn" id="hReg" aria-label="Registre des liens">
@@ -345,6 +347,31 @@ legend{font-size:14px;font-weight:600;padding:0;margin-bottom:6px}
     <p id="okText"></p>
   </section>
 
+  <!-- ============ AGENT ============ -->
+  <section id="viewAgent" class="screen pad" hidden aria-labelledby="h1g">
+    <div class="stephead"><small>Avant de commencer</small><h1 id="h1g">Identification de l'agent</h1></div>
+    <p class="sub" style="margin:0">Votre nom et votre matricule sont joints à chaque lien que vous enregistrez, et figurent dans le fichier de résultats.</p>
+    <div class="field">
+      <label for="agPrenom">Prénom</label>
+      <input type="text" id="agPrenom" class="input" autocomplete="given-name">
+    </div>
+    <div class="field">
+      <label for="agNom">Nom</label>
+      <input type="text" id="agNom" class="input" autocomplete="family-name">
+    </div>
+    <div class="field">
+      <label for="agMat">Matricule</label>
+      <input type="text" id="agMat" class="input npi" autocomplete="off" autocapitalize="characters" placeholder="ex. RAV-001 ou TEST-01">
+      <span class="hint">Pendant le test, utilisez un matricule qui commence par TEST.</span>
+    </div>
+    <div class="field">
+      <label for="agTel">Téléphone <span class="hint">(facultatif)</span></label>
+      <input type="tel" id="agTel" class="input" autocomplete="tel" placeholder="ex. +224 6XX XX XX XX">
+    </div>
+    <span class="err" id="agErr" hidden></span>
+    <button type="button" class="btn" id="agSave">Commencer le recensement</button>
+  </section>
+
   <!-- ============ REGISTRE ============ -->
   <section id="viewReg" class="screen pad" hidden aria-labelledby="h1r">
     <div class="stephead"><small>Liens enregistrés sur cet appareil</small><h1 id="h1r">Registre</h1></div>
@@ -372,12 +399,9 @@ legend{font-size:14px;font-weight:600;padding:0;margin-bottom:6px}
       <button type="button" class="btn ghost" id="markSent">Marquer les liens comme envoyés</button>
     </div>
     <div class="card">
-      <span class="legend">Agent</span>
-      <div class="row2">
-        <div class="field"><label for="agMat">Matricule</label><input type="text" id="agMat" class="input small" placeholder="ex. RAV-001"></div>
-        <div class="field"><label for="agNom">Nom</label><input type="text" id="agNom" class="input small"></div>
-      </div>
-      <button type="button" class="btn small" id="agSave">Enregistrer l'agent</button>
+      <span class="legend">Agent recenseur</span>
+      <span class="sub" id="agentInfo"></span>
+      <button type="button" class="btn ghost small" id="agChange">Changer d'agent</button>
     </div>
     <div class="card">
       <span class="legend">Fusionner la sauvegarde d'un autre agent</span>
@@ -559,7 +583,7 @@ var CHECK='<svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fi
 /* =====================================================================
    4. ÉCRANS ET BANDEAU
    ===================================================================== */
-var view="flow";   /* flow | reg | exp */
+var view="flow";   /* flow | reg | exp | agent */
 var step=1;        /* 1 identifier · 2 localiser · 3 valider · 4 enregistré */
 var f={ lien:"domicile", lat:null, lng:null, precision:null, photo:null, plan:null, manual:false };
 
@@ -569,9 +593,12 @@ function netUpdate(){
   $("offNotice").hidden=navigator.onLine;
 }
 window.addEventListener("online",netUpdate); window.addEventListener("offline",netUpdate);
+function agentFull(){ var a=db.agent||{}; return ((a.prenom||"")+" "+(a.nom||"").toUpperCase()).trim(); }
+function agentOk(){ return !!(db.agent&&db.agent.mat&&db.agent.nom&&db.agent.prenom); }
 function agentUpdate(){
-  $("agentLabel").textContent=db.agent.mat? "Agent "+db.agent.mat+(db.agent.nom?" · "+db.agent.nom:"") : "Agent non renseigné";
-  $("agMat").value=db.agent.mat||""; $("agNom").value=db.agent.nom||"";
+  $("agentLabel").textContent=agentOk()? agentFull()+" · "+db.agent.mat : "Agent non renseigné";
+  $("agentInfo").textContent=agentOk()? agentFull()+" · matricule "+db.agent.mat+(db.agent.tel?" · "+db.agent.tel:"") : "Aucun agent identifié.";
+  $("agPrenom").value=db.agent.prenom||""; $("agNom").value=db.agent.nom||""; $("agMat").value=db.agent.mat||""; $("agTel").value=db.agent.tel||"";
 }
 function gpsHeadText(){
   if(f.lat===null) return "GPS…";
@@ -580,13 +607,13 @@ function gpsHeadText(){
 function render(){
   var flow=view==="flow";
   ["step1","step2","step3","step4"].forEach(function(id,i){ $(id).hidden=!(flow&&step===i+1); });
-  $("viewReg").hidden=view!=="reg"; $("viewExp").hidden=view!=="exp";
+  $("viewReg").hidden=view!=="reg"; $("viewExp").hidden=view!=="exp"; $("viewAgent").hidden=view!=="agent";
   /* bandeau */
   var first=flow&&(step===1||step===4);
-  $("hBack").hidden=first;
+  $("hBack").hidden=first||(view==="agent"&&!agentOk());
   $("hLeft").className="hleft"+(first?"":" center");
   $("agentLabel").hidden=!first;
-  $("eyebrow").textContent= view==="reg"? "Registre · Kaloum" : view==="exp"? "Envoi · Kaloum" : "Prototype · Kaloum";
+  $("eyebrow").textContent= view==="reg"? "Registre · Kaloum" : view==="exp"? "Envoi · Kaloum" : view==="agent"? "Agent · Kaloum" : "Prototype · Kaloum";
   $("hReg").hidden=!first; $("netPill").hidden=!first;
   $("gpsHead").hidden=!(flow&&step===2); $("gpsHead").textContent=gpsHeadText();
   $("steps").hidden=!flow;
@@ -600,7 +627,11 @@ function render(){
 function setView(v){ view=v; if(v==="reg") renderRegistre(); if(v==="exp") renderExport(); render(); window.scrollTo(0,0); if(v==="flow"&&step===2) refreshMap(); }
 $("hReg").addEventListener("click",function(){ setView("reg"); });
 $("netPill").addEventListener("click",function(){ setView("exp"); });
+$("agentLabel").addEventListener("click",function(){ setView("agent"); });
+["agPrenom","agNom","agMat"].forEach(function(id){ $(id).addEventListener("input",function(){ $("agErr").hidden=true; }); });
+$("agChange").addEventListener("click",function(){ setView("agent"); });
 $("hBack").addEventListener("click",function(){
+  if(view==="agent"&&!agentOk()) return;
   if(view!=="flow"){ setView("flow"); return; }
   if(step>1&&step<4) goStep(step-1);
 });
@@ -893,7 +924,7 @@ function enregistrer(){
   else {
     if(prev){ prev.date_fin=today(); prev.envoye=false; }
     db.liens.push({ id:uid(), npi:n, prenom:$("prenom").value.trim(), nom:$("nom").value.trim().toUpperCase(), naissance:$("naissance").value||null,
-      role:$("role").value, id_adresse:a.id, type:f.lien, date_debut:today(), date_fin:null, source:"ravec", agent:db.agent.mat||null,
+      role:$("role").value, id_adresse:a.id, type:f.lien, date_debut:today(), date_fin:null, source:"ravec", agent:db.agent.mat||null, agent_nom:agentFull()||null,
       lat:f.lat, lng:f.lng, precision:f.precision, statut:"valide", envoye:false, cree_le:new Date().toISOString() });
   }
   if(!save()) return false;
@@ -941,7 +972,7 @@ function renderRegistre(){
     var people=groups[id].sort(function(x,y){ return (x.date_fin?1:0)-(y.date_fin?1:0); }).map(function(l){
       var conf=pendingCancel===l.id;
       return '<div class="persrow"><div style="min-width:0;display:flex;flex-direction:column;gap:1px"><span class="v2">'+esc(l.prenom+" "+l.nom)+'</span><span class="mono">'+esc(l.npi)+'</span>'+
-        '<span class="hint">'+esc(l.role)+" · "+esc(l.type)+" · depuis le "+esc(frDate(l.date_debut))+(l.date_fin?" · clos le "+esc(frDate(l.date_fin)):"")+"</span>"+
+        '<span class="hint">'+esc(l.role)+" · "+esc(l.type)+" · depuis le "+esc(frDate(l.date_debut))+(l.date_fin?" · clos le "+esc(frDate(l.date_fin)):"")+"</span>"+(l.agent?'<span class="hint">Agent : '+esc((l.agent_nom?l.agent_nom+" · ":"")+l.agent)+"</span>":"")+
         (conf? '<span style="display:flex;gap:14px"><button class="linkbtn" data-cancel-yes="'+l.id+'">Confirmer l\'annulation</button><button class="linkbtn" style="color:var(--muted)" data-cancel-no="1">Garder</button></span>'
              : (!l.date_fin? '<span><button class="linkbtn" data-cancel="'+l.id+'">Annuler ce lien</button></span>' : ""))+
         '</div><div class="pills">'+(l.date_fin?'<span class="pill">Clos</span>':'<span class="pill ok">Actif</span>')+(l.envoye?"":'<span class="pill wait">À envoyer</span>')+"</div></div>";
@@ -976,7 +1007,9 @@ function buildSql(){
   L.push("BEGIN;");
   db.voies.forEach(function(v){ var t=splitType(v.nom);
     L.push("INSERT INTO voie (id_commune, code_voie, type_voie, nom, statut) SELECT id_commune, "+sq(v.code)+", "+sq(t[0])+", "+sq(t[1])+", 'a_valider' FROM commune WHERE code_postal = '88000' ON CONFLICT (id_commune, code_voie) DO NOTHING;"); });
-  if(db.agent.mat) L.push("INSERT INTO agent (matricule, nom, organisme, id_commune) SELECT "+sq(db.agent.mat)+", "+sq(db.agent.nom||db.agent.mat)+", 'RAVEC', id_commune FROM commune WHERE code_postal = '88000' ON CONFLICT (matricule) DO NOTHING;");
+  var agents={}; if(db.agent.mat) agents[db.agent.mat]=agentFull();
+  db.liens.forEach(function(l){ if(l.agent&&!agents[l.agent]) agents[l.agent]=l.agent_nom||l.agent; });
+  Object.keys(agents).forEach(function(m){ L.push("INSERT INTO agent (matricule, nom, organisme, id_commune) SELECT "+sq(m)+", "+sq(agents[m]||m)+", 'RAVEC', id_commune FROM commune WHERE code_postal = '88000' ON CONFLICT (matricule) DO NOTHING;"); });
   Object.keys(db.adresses).forEach(function(id){ var a=db.adresses[id];
     L.push("INSERT INTO adresse (id_adresse, id_voie, id_quartier, numero, complement, type_batiment, position, statut) SELECT "+sq(a.id)+", v.id_voie, q.id_quartier, "+a.numero+", "+sq(a.complement)+", 'maison', ST_SetSRID(ST_MakePoint("+a.lng+", "+a.lat+"), 4326), "+(a.conforme_plan===false?"'provisoire'":"'validee'")+" FROM voie v, quartier q WHERE v.code_voie = "+sq(a.code_voie)+" AND q.code_postal = "+sq(a.cp_quartier)+" ON CONFLICT (id_adresse) DO NOTHING;"); });
   var seen={};
@@ -989,9 +1022,9 @@ function buildSql(){
   return L.join("\n")+"\n";
 }
 function buildCsv(){
-  var head=["npi","prenom","nom","date_naissance","role_menage","type_lien","id_adresse","adresse","code_postal","quartier","carreau","conforme_plan","plan_propose","remarque_terrain","latitude","longitude","precision_m","date_debut","date_fin","statut","agent","envoye"];
+  var head=["npi","prenom","nom","date_naissance","role_menage","type_lien","id_adresse","adresse","code_postal","quartier","carreau","conforme_plan","plan_propose","remarque_terrain","latitude","longitude","precision_m","date_debut","date_fin","statut","agent_matricule","agent_nom","envoye"];
   var rows=db.liens.map(function(l){ var a=db.adresses[l.id_adresse]||{}, qz=quartierByCp(a.cp_quartier);
-    return [l.npi,l.prenom,l.nom,l.naissance,l.role,l.type,l.id_adresse,a.id?adresseTexte(a):"",a.cp_quartier,qz?qz.nom:"",a.carreau,a.conforme_plan===false?"non":"oui",a.plan_propose,a.remarque,l.lat,l.lng,l.precision,l.date_debut,l.date_fin,l.statut,l.agent,l.envoye?"oui":"non"]
+    return [l.npi,l.prenom,l.nom,l.naissance,l.role,l.type,l.id_adresse,a.id?adresseTexte(a):"",a.cp_quartier,qz?qz.nom:"",a.carreau,a.conforme_plan===false?"non":"oui",a.plan_propose,a.remarque,l.lat,l.lng,l.precision,l.date_debut,l.date_fin,l.statut,l.agent,l.agent_nom||(l.agent===db.agent.mat?agentFull():""),l.envoye?"oui":"non"]
       .map(function(x){ x=x==null?"":String(x); return /[";\n]/.test(x)? '"'+x.replace(/"/g,'""')+'"' : x; }).join(";"); });
   return "﻿"+head.join(";")+"\n"+rows.join("\n")+"\n";
 }
@@ -1034,7 +1067,17 @@ $("importFile").addEventListener("change",function(e){
   };
   rd.readAsText(file);
 });
-$("agSave").addEventListener("click",function(){ db.agent.mat=$("agMat").value.trim().toUpperCase(); db.agent.nom=$("agNom").value.trim(); save(); agentUpdate(); toast("Agent enregistré"); });
+$("agSave").addEventListener("click",function(){
+  var pr=$("agPrenom").value.trim(), nm=$("agNom").value.trim(), mat=$("agMat").value.trim().toUpperCase().replace(/\s+/g,""), tel=$("agTel").value.trim();
+  var miss=[]; if(!pr) miss.push("le prénom"); if(!nm) miss.push("le nom"); if(!mat) miss.push("le matricule");
+  if(miss.length){ $("agErr").hidden=false; $("agErr").textContent="Indiquez "+miss.join(", ")+"."; return; }
+  $("agErr").hidden=true;
+  db.agent={ prenom:pr, nom:nm, mat:mat, tel:tel||null };
+  /* liens faits avant l'identification : rattachés à cet agent */
+  var n=0; db.liens.forEach(function(l){ if(!l.agent){ l.agent=mat; l.agent_nom=agentFull(); l.envoye=false; n++; } });
+  save(); agentUpdate(); netUpdate(); setView("flow");
+  toast("Bienvenue "+pr+(n? " · "+n+" lien"+(n>1?"s":"")+" rattaché"+(n>1?"s":"")+" à votre nom" : ""));
+});
 $("wipe").addEventListener("click",function(){ $("wipeConfirm").hidden=false; });
 $("wipeNo").addEventListener("click",function(){ $("wipeConfirm").hidden=true; });
 $("wipeYes").addEventListener("click",function(){ db={ agent:db.agent, voies:[], adresses:{}, liens:[] }; save(); fillSelects(false); netUpdate(); renderExport(); $("wipeConfirm").hidden=true; toast("Données effacées"); });
@@ -1044,8 +1087,8 @@ $("wipeYes").addEventListener("click",function(){ db={ agent:db.agent, voies:[],
    ===================================================================== */
 if("serviceWorker" in navigator && (location.protocol==="https:"||location.hostname==="localhost")){ navigator.serviceWorker.register("sw.js").catch(function(){}); }
 if(navigator.storage&&navigator.storage.persist){ try{ navigator.storage.persist(); }catch(e){} }
+if(!agentOk()){ view="agent"; if(db.agent&&db.agent.nom&&!db.agent.prenom){ var p=db.agent.nom.split(" "); db.agent.prenom=p.shift(); db.agent.nom=p.join(" "); } }
 fillSelects(false); agentUpdate(); netUpdate(); personUpdate(); addrUpdate(); render();
-if(!db.agent.mat) setTimeout(function(){ toast("Renseignez votre matricule : touchez le badge réseau en haut à droite."); },400);
 window.__npiApp={ buildSql:buildSql, addressAt:addressAt, streets:STREETS };
 })();
 </script>
