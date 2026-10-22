@@ -1,7 +1,7 @@
 /* Agent recenseur NPI · Kaloum : garde l'appli et la carte pour travailler sans réseau. */
-const VERSION = "recenseur-v2";
+const VERSION = "recenseur-v4";
 const SHELL = [
-  "./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png",
+  "./", "./index.html", "./config.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png",
   "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"
 ];
@@ -33,6 +33,13 @@ self.addEventListener("fetch", e => {
       .catch(() => caches.match("./index.html").then(r => r || caches.match("./"))));
     return;
   }
+  /* Réglages de la base centrale : toujours la version la plus récente */
+  if (url.origin === location.origin && url.pathname.endsWith("/config.js")) {
+    e.respondWith(fetch(req).then(r => { const c = r.clone(); caches.open(VERSION).then(x => x.put(req, c)); return r; }).catch(() => caches.match(req).then(r => r || new Response("window.NPI_CONFIG={};", { headers: { "Content-Type": "text/javascript" } }))));
+    return;
+  }
+  /* Envois vers la base centrale : jamais mis en cache */
+  if (req.method !== "GET" || url.pathname.includes("/rest/v1/")) return;
   /* Tuiles satellite déjà vues : gardées pour le hors-ligne */
   if (url.hostname === "server.arcgisonline.com") {
     e.respondWith(caches.open(TILES).then(cache => cache.match(req).then(hit => hit || fetch(req).then(r => { cache.put(req, r.clone()); trimTiles(cache); return r; }))).catch(() => new Response("", { status: 504 })));
