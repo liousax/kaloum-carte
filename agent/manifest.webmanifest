@@ -1,0 +1,16 @@
+{
+  "name": "Agent recenseur NPI · Kaloum",
+  "short_name": "Recenseur",
+  "description": "Prototype de test : relier le NPI d'une personne à son adresse dans le plan d'adressage de Kaloum.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F4F6F3",
+  "theme_color": "#0E5A3A",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

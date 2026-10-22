@@ -1,0 +1,1053 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#0E5A3A">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Recenseur">
+<title>Agent Recenseur NPI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+/* Appli terrain d'une colonne (390 px sur téléphone, centrée sur ordinateur) :
+   bandeau vert avec la progression, contenu au pouce, bouton principal fixé en bas. */
+:root{
+  --brand:#0E5A3A; --brand-ink:#FFFFFF; --brand-pale:#D7EBDF; --brand-soft:#E6F0EA; --brand-tint:#E3ECE6; --ok-ring:#E3F0E8;
+  --signal:#FFD34E; --pin:#C8402A;
+  --bg:#F4F6F3; --surface:#FFFFFF; --seg:#EEF2EF; --handle:#CDD5CF;
+  --line:#DCE3DE; --line-soft:#E6EBE7; --field:#B7C6BC; --dash:#9BB5A5; --rule:#D3DCD5;
+  --fg:#17211B; --fg-2:#2A362F; --fg-3:#3E4A42; --muted:#4A5A50; --muted-2:#5B6A60;
+  --warn-bg:#FFF6D6; --warn-fg:#4D3F00; --warn-icon:#7A6200; --danger:#A3291A;
+  --f-body:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --gutter-l:max(20px, env(safe-area-inset-left, 0px));
+  --gutter-r:max(20px, env(safe-area-inset-right, 0px));
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:1000;background:var(--brand)}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--signal);outline-offset:2px}
+h1{margin:0;font-size:26px;line-height:1.15;font-weight:700;text-wrap:balance}
+.app{max-width:480px;margin:0 auto;min-height:100%;background:var(--bg);display:flex;flex-direction:column;position:relative}
+@media (min-width:520px){ .app{box-shadow:0 0 0 1px var(--line), 0 10px 40px rgba(23,33,27,.08)} }
+.pad{padding-left:var(--gutter-l);padding-right:var(--gutter-r)}
+svg{flex-shrink:0}
+
+/* ---------- Bandeau ---------- */
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:900;background:var(--brand);color:var(--brand-ink);padding-block:20px 18px;display:flex;flex-direction:column;gap:14px}
+.hrow{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:40px}
+.hleft{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.hleft.center{align-items:center;text-align:center}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--brand-pale)}
+.agentname{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hright{display:flex;align-items:center;gap:6px;justify-content:flex-end;min-width:44px}
+.iconbtn{all:unset;cursor:pointer;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:10px;color:var(--brand-ink)}
+.iconbtn.back{margin-left:-12px}
+.iconbtn:focus-visible{outline:2px solid var(--signal)}
+.netpill{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-size:13px;background:rgba(255,255,255,.14);padding:6px 10px;border-radius:999px;white-space:nowrap}
+.netpill:focus-visible{outline:2px solid var(--signal)}
+.gpshead{font-size:13px;color:var(--brand-pale);white-space:nowrap}
+.steps{display:flex;gap:6px}
+.steps span{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.28)}
+.steps span.done{background:var(--signal)}
+
+/* ---------- Contenu ---------- */
+main{flex:1;display:flex;flex-direction:column;padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
+.screen{display:flex;flex-direction:column;gap:18px;padding-top:22px}
+.stephead{display:flex;flex-direction:column;gap:4px}
+.stephead small{font-size:13px;font-weight:600;color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field label,.legend{font-size:14px;font-weight:600;color:var(--fg)}
+.hint{font-size:13px;color:var(--muted)}
+.err{font-size:13px;color:var(--danger);font-weight:600}
+.input{width:100%;height:52px;border:1.5px solid var(--field);border-radius:12px;padding:0 14px;background:var(--surface);font-size:16px;color:var(--fg)}
+.input.small{height:46px;font-size:15px}
+.input.npi{font-family:var(--f-mono);letter-spacing:.04em;text-transform:uppercase}
+select.input{padding:0 12px}
+.row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+
+.scan{all:unset;cursor:pointer;box-sizing:border-box;border:2px dashed var(--dash);border-radius:18px;background:var(--surface);height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;position:relative;overflow:hidden;text-align:center;padding:0 16px}
+.scan span{font-size:16px;font-weight:600;color:var(--brand)}
+.scan small{font-size:13px;color:var(--muted)}
+.scan input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.scan:focus-within{outline:3px solid var(--signal);outline-offset:2px}
+.divider{display:flex;align-items:center;gap:10px;color:var(--muted-2);font-size:13px}
+.divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--rule)}
+
+.person{background:var(--surface);border:1.5px solid var(--brand);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.person.todo{border:1.5px dashed var(--dash)}
+.ptop{display:flex;gap:12px;align-items:center}
+.avatar{width:52px;height:52px;border-radius:12px;background:var(--brand-tint);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pinfo{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.pname{font-size:16px;font-weight:600}
+.psub{font-size:13px;color:var(--muted)}
+.pstat{font-size:12px;font-weight:600;color:var(--brand);display:flex;align-items:center;gap:4px}
+.person.todo .pstat{color:var(--muted)}
+
+/* ---------- Étape 2 : carte + feuille ---------- */
+.mapwrap{position:relative;height:300px;background:#EDE9DF;overflow:hidden}
+#map{position:absolute;inset:0;z-index:1}
+#mini{position:absolute;inset:0;width:100%;height:100%;display:block;background:#EDE9DF;touch-action:manipulation}
+.recenter{all:unset;cursor:pointer;position:absolute;right:max(14px, env(safe-area-inset-right,0px));bottom:36px;z-index:500;width:46px;height:46px;border-radius:12px;background:#FFFFFF;box-shadow:0 2px 8px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;color:var(--fg)}
+.recenter:focus-visible{outline:3px solid var(--signal)}
+.maptag{position:absolute;left:var(--gutter-l);top:12px;z-index:500;font-size:12px;font-weight:600;color:var(--fg-3);background:rgba(255,255,255,.9);padding:3px 8px;border-radius:6px;max-width:calc(100% - 100px)}
+.sheet{margin-top:-22px;position:relative;z-index:600;background:var(--surface);border-radius:22px 22px 0 0;padding-top:12px;display:flex;flex-direction:column;gap:14px;flex:1}
+.handle{width:40px;height:4px;border-radius:2px;background:var(--handle);align-self:center}
+.addrblock{display:flex;flex-direction:column;gap:4px}
+.addrstate{font-size:13px;font-weight:600;color:var(--muted)}
+.addrbig{font-size:20px;font-weight:700;line-height:1.2}
+.addrcity{font-size:15px;color:var(--fg-3)}
+.chip{font-family:var(--f-mono);font-size:13px;color:var(--brand);background:var(--brand-soft);align-self:flex-start;padding:3px 8px;border-radius:6px}
+.planline{font-size:13px;color:var(--muted)}
+.planline.warn{color:var(--danger);font-weight:600}
+fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;min-width:0}
+legend{font-size:14px;font-weight:600;padding:0;margin-bottom:6px}
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;background:var(--seg);padding:4px;border-radius:12px}
+.seg button{all:unset;cursor:pointer;box-sizing:border-box;height:44px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--brand);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.seg button:focus-visible{outline:2px solid var(--brand)}
+.obtn{all:unset;cursor:pointer;box-sizing:border-box;height:48px;border:1.5px solid var(--field);border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:600;color:var(--fg);position:relative;overflow:hidden;padding:0 10px;text-align:center}
+.obtn[aria-expanded="true"],.obtn.on{border-color:var(--brand);color:var(--brand)}
+.obtn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.obtn:focus-visible,.obtn:focus-within{outline:3px solid var(--signal);outline-offset:2px}
+.thumb{width:100%;max-width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;border:1px solid var(--line)}
+.manual{border-top:1px solid var(--line-soft);padding-top:14px;display:flex;flex-direction:column;gap:12px}
+.newvoie{background:var(--bg);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px}
+
+/* ---------- Étape 3 ---------- */
+.recap{background:var(--surface);border-radius:16px;border:1px solid var(--line);display:flex;flex-direction:column}
+.recap>div{padding:14px 16px;display:flex;flex-direction:column;gap:3px;border-bottom:1px solid var(--line-soft);min-width:0}
+.recap>div:last-child{border-bottom:0}
+.recap .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.recap .grid2>div{display:flex;flex-direction:column;gap:2px}
+.k{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2)}
+.k2{font-size:12px;color:var(--muted-2)}
+.v{font-size:16px;font-weight:600}
+.v2{font-size:14px;font-weight:600}
+.sub{font-size:14px;color:var(--fg-3)}
+.mono{font-family:var(--f-mono);font-size:13px;color:var(--fg-3);overflow-wrap:anywhere}
+.mono.brand{color:var(--brand)}
+.consent{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;cursor:pointer}
+.consent input{width:22px;height:22px;margin:1px 0 0;accent-color:var(--brand);flex-shrink:0}
+.consent span{font-size:14px;line-height:1.45;color:var(--fg-2)}
+.notice{display:flex;gap:10px;align-items:center;background:var(--warn-bg);border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.4;color:var(--warn-fg)}
+.notice.info{background:var(--brand-soft);color:var(--fg)}
+
+/* ---------- Succès ---------- */
+.success{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding-block:60px 20px}
+.ring{width:84px;height:84px;border-radius:50%;background:var(--ok-ring);display:flex;align-items:center;justify-content:center}
+.success p{margin:0;font-size:15px;line-height:1.5;color:var(--fg-3);max-width:300px}
+
+/* ---------- Bas d'écran ---------- */
+.dock{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:800;background:var(--bg);padding-top:16px;padding-bottom:calc(28px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px}
+.dock.white{background:var(--surface)}
+.btn{all:unset;cursor:pointer;box-sizing:border-box;width:100%;min-height:56px;border-radius:14px;background:var(--brand);color:var(--brand-ink);font-size:17px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;text-align:center;padding:0 16px}
+.btn[disabled]{background:#C9D2CC;color:var(--fg-3);cursor:not-allowed}
+.btn:focus-visible{outline:3px solid var(--signal);outline-offset:2px}
+.btn.ghost{min-height:48px;background:transparent;border:1.5px solid var(--field);color:var(--fg);font-size:15px}
+.btn.small{min-height:46px;font-size:15px}
+.btn.danger{background:transparent;color:var(--danger);border:1.5px solid var(--danger);min-height:46px;font-size:15px}
+
+/* ---------- Registre et envoi ---------- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.stat{display:flex;flex-direction:column;gap:2px}
+.stat b{font-size:24px;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted)}
+.persrow{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding-top:10px;border-top:1px solid var(--line-soft)}
+.pills{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.pill{font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap;border:1px solid var(--field);color:var(--muted)}
+.pill.ok{border-color:var(--brand);color:var(--brand)}
+.pill.wait{border-color:var(--warn-icon);color:var(--warn-fg);background:var(--warn-bg)}
+.linkbtn{all:unset;cursor:pointer;color:var(--danger);font-size:13px;font-weight:600;padding:6px 0}
+.empty{text-align:center;padding:30px 12px;color:var(--muted);font-size:15px}
+.testlink{all:unset;cursor:pointer;font-size:13px;font-weight:600;color:var(--brand);text-decoration:underline;text-underline-offset:3px;padding:6px 0}
+.testlink:focus-visible{outline:2px solid var(--brand)}
+.input.area{height:auto;min-height:72px;padding:12px 14px;line-height:1.4;resize:vertical;font-size:15px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(116px + env(safe-area-inset-top,0px));box-shadow:0 6px 20px rgba(0,0,0,.18);z-index:1100;background:var(--fg);color:#FFFFFF;padding:10px 16px;border-radius:10px;font-size:14px;font-weight:600;max-width:calc(100% - 32px);text-align:center}
+.leaflet-container{font-family:var(--f-body)}
+@media (prefers-reduced-motion: no-preference){ .btn,.seg button,.obtn{transition:background .15s,color .15s,border-color .15s} }
+</style>
+</head>
+<body>
+<div class="app">
+
+<header class="top pad">
+  <div class="hrow">
+    <button type="button" class="iconbtn back" id="hBack" aria-label="Retour" hidden>
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/></svg>
+    </button>
+    <div class="hleft" id="hLeft">
+      <span class="eyebrow" id="eyebrow">Prototype · Kaloum</span>
+      <span class="agentname" id="agentLabel">Agent non renseigné</span>
+    </div>
+    <div class="hright">
+      <button type="button" class="iconbtn" id="hReg" aria-label="Registre des liens">
+        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2"/><circle cx="4.5" cy="12" r="1.2"/><circle cx="4.5" cy="18" r="1.2"/></svg>
+      </button>
+      <button type="button" class="netpill" id="netPill" aria-label="Envoi et réglages">
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFD34E" stroke-width="2.2" stroke-linecap="round"><path d="M2 8.8a15 15 0 0 1 20 0"/><path d="M5 12.5a10 10 0 0 1 14 0"/><path d="M8.5 16.2a5 5 0 0 1 7 0"/><circle cx="12" cy="20" r="1"/></svg>
+        <span id="netText">Hors ligne</span>
+      </button>
+      <span class="gpshead" id="gpsHead" hidden>GPS…</span>
+    </div>
+  </div>
+  <div class="steps" id="steps" aria-hidden="true"><span id="st1"></span><span id="st2"></span><span id="st3"></span></div>
+</header>
+
+<main>
+
+  <!-- ============ ÉTAPE 1 ============ -->
+  <section id="step1" class="screen pad" aria-labelledby="h1a">
+    <div class="stephead"><small>Étape 1 sur 3</small><h1 id="h1a">Identifier la personne</h1></div>
+
+    <label class="scan" for="scanFile">
+      <svg aria-hidden="true" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#0E5A3A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="4" height="4"/><rect x="13" y="13" width="4" height="4"/><path d="M13 7h4v4"/><path d="M7 13v4h4"/></svg>
+      <span id="scanLabel">Scanner la carte ou l'acte de naissance</span>
+      <small id="scanSub">Photographiez le code QR du document</small>
+      <input type="file" id="scanFile" accept="image/*" capture="environment">
+    </label>
+
+    <div class="divider">ou saisir le NPI</div>
+
+    <div class="field">
+      <label for="npi">Numéro personnel d'identification</label>
+      <input type="text" id="npi" class="input npi" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="24" placeholder="18 caractères">
+      <span style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span class="hint" id="npiHint">0 / 18 caractères</span><button type="button" class="testlink" id="npiTest">Utiliser un NPI de test</button></span>
+    </div>
+
+    <section aria-label="Personne" class="person todo" id="personCard">
+      <div class="ptop">
+        <div class="avatar" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A5A50" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div>
+        <div class="pinfo">
+          <span class="pname" id="pName">Identité à compléter</span>
+          <span class="psub" id="pSub">Saisissez le NPI, puis le nom</span>
+          <span class="pstat" id="pStat"></span>
+        </div>
+      </div>
+      <div id="pFields" class="row2">
+        <div class="field"><label for="prenom">Prénom</label><input type="text" id="prenom" class="input small" autocomplete="off"></div>
+        <div class="field"><label for="nom">Nom</label><input type="text" id="nom" class="input small" autocomplete="off"></div>
+        <div class="field" style="grid-column:1 / -1"><label for="naissance">Date de naissance</label><input type="date" id="naissance" class="input small"></div>
+      </div>
+    </section>
+
+    <div class="field">
+      <label for="role">Rôle dans le ménage</label>
+      <select id="role" class="input">
+        <option>Chef de ménage</option><option>Conjoint(e)</option><option>Enfant</option><option>Autre parent</option><option>Autre</option>
+      </select>
+    </div>
+  </section>
+
+  <!-- ============ ÉTAPE 2 ============ -->
+  <section id="step2" hidden aria-label="Localiser le logement" style="display:flex;flex-direction:column;flex:1">
+    <div class="mapwrap">
+      <div id="map" role="application" aria-label="Carte : touchez la porte du logement"></div>
+      <canvas id="mini" hidden aria-label="Plan des rues de Kaloum : touchez la porte du logement"></canvas>
+      <span class="maptag" id="mapTag" hidden>Hors connexion · plan des rues</span>
+      <button type="button" class="recenter" id="gpsBtn" aria-label="Relever ma position GPS">
+        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+      </button>
+    </div>
+    <div class="sheet pad">
+      <div class="handle" aria-hidden="true"></div>
+      <div class="addrblock" aria-live="polite">
+        <span class="addrstate" id="addrState">Recherche de la position…</span>
+        <span class="addrbig" id="addrLine">Placez-vous devant la porte</span>
+        <span class="addrcity" id="addrCity">Kaloum, Conakry</span>
+        <span class="chip" id="addrId">GN-·····-·····-··</span>
+        <span class="planline" id="planLine"></span>
+      </div>
+
+      <fieldset>
+        <legend>Type de lien</legend>
+        <div class="seg" id="lienSeg">
+          <button type="button" data-v="domicile" aria-pressed="true">Domicile</button>
+          <button type="button" data-v="travail" aria-pressed="false">Travail</button>
+          <button type="button" data-v="postale" aria-pressed="false">Postale</button>
+        </div>
+      </fieldset>
+
+      <div class="row2">
+        <label class="obtn" id="photoBtn" for="photo">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          <span id="photoLabel">Photo façade</span>
+          <input type="file" id="photo" accept="image/*" capture="environment">
+        </label>
+        <button type="button" class="obtn" id="manualBtn" aria-expanded="false" aria-controls="manual">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Autre adresse
+        </button>
+      </div>
+      <img id="photoPrev" class="thumb" alt="Façade du logement" hidden>
+      <div class="field">
+        <label for="remarque">Remarque terrain <span class="hint">(facultatif)</span></label>
+        <textarea id="remarque" class="input area" rows="2" placeholder="ex. la plaque indique le 15, rue mal tracée, nom différent sur place"></textarea>
+      </div>
+
+      <div class="manual" id="manual" hidden>
+        <div class="field"><label for="voie">Voie</label><select id="voie" class="input"></select></div>
+        <div class="newvoie" id="newVoie" hidden>
+          <div class="row2">
+            <div class="field"><label for="nvType">Type</label>
+              <select id="nvType" class="input small"><option>rue</option><option>avenue</option><option>boulevard</option><option>place</option><option>impasse</option><option>corniche</option></select>
+            </div>
+            <div class="field"><label for="nvNom">Nom</label><input type="text" id="nvNom" class="input small"></div>
+          </div>
+          <span class="hint" id="nvCode"></span>
+          <div class="row2">
+            <button type="button" class="btn ghost small" id="nvCancel">Annuler</button>
+            <button type="button" class="btn small" id="nvAdd">Ajouter</button>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field"><label for="numero">Numéro</label><input type="number" id="numero" class="input" inputmode="numeric" min="1" step="1"></div>
+          <div class="field"><label for="complement">Complément</label>
+            <select id="complement" class="input"><option value="">Aucun</option><option>BIS</option><option>TER</option><option>A</option><option>B</option><option>C</option></select>
+          </div>
+        </div>
+        <div class="field"><label for="quartier">Quartier</label><select id="quartier" class="input"></select></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ÉTAPE 3 ============ -->
+  <section id="step3" class="screen pad" hidden aria-labelledby="h1c">
+    <div class="stephead"><small>Étape 3 sur 3</small><h1 id="h1c">Vérifier et valider</h1></div>
+    <section class="recap" id="recap" aria-label="Récapitulatif"></section>
+    <div class="notice" id="demNotice" hidden></div>
+    <label class="consent" for="consent">
+      <input type="checkbox" id="consent">
+      <span>La personne a été informée que son adresse sera rattachée à son NPI et consultable uniquement par les services habilités.</span>
+    </label>
+    <div class="notice" id="offNotice">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7A6200" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      <span>Hors ligne : le lien sera envoyé au registre à la prochaine connexion.</span>
+    </div>
+  </section>
+
+  <!-- ============ SUCCÈS ============ -->
+  <section id="step4" class="success pad" hidden aria-labelledby="h1d">
+    <div class="ring" aria-hidden="true"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#0E5A3A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></div>
+    <h1 id="h1d">Lien enregistré</h1>
+    <p id="okText"></p>
+  </section>
+
+  <!-- ============ REGISTRE ============ -->
+  <section id="viewReg" class="screen pad" hidden aria-labelledby="h1r">
+    <div class="stephead"><small>Liens enregistrés sur cet appareil</small><h1 id="h1r">Registre</h1></div>
+    <div class="card stats">
+      <div class="stat"><b id="sAdr">0</b><span>adresses</span></div>
+      <div class="stat"><b id="sPers">0</b><span>personnes liées</span></div>
+      <div class="stat"><b id="sWait">0</b><span>à envoyer</span></div>
+    </div>
+    <div class="field"><label for="q">Rechercher</label><input type="text" id="q" class="input" placeholder="NPI, nom ou rue" autocomplete="off"></div>
+    <div id="regList" style="display:flex;flex-direction:column;gap:12px"></div>
+  </section>
+
+  <!-- ============ ENVOI ============ -->
+  <section id="viewExp" class="screen pad" hidden aria-labelledby="h1e">
+    <div class="stephead"><small>Transmission au registre</small><h1 id="h1e">Envoi et réglages</h1></div>
+    <p class="sub" style="margin:0" id="exportSummary"></p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button type="button" class="btn" id="exShare">Envoyer les résultats</button>
+      <span class="hint" id="shareHint">Ouvre WhatsApp, Gmail… avec le fichier des résultats du test.</span>
+      <button type="button" class="btn ghost" id="exSql">Télécharger le fichier SQL</button>
+      <div class="row2">
+        <button type="button" class="btn ghost" id="exCsv">Fichier CSV</button>
+        <button type="button" class="btn ghost" id="exJson">Sauvegarde JSON</button>
+      </div>
+      <button type="button" class="btn ghost" id="markSent">Marquer les liens comme envoyés</button>
+    </div>
+    <div class="card">
+      <span class="legend">Agent</span>
+      <div class="row2">
+        <div class="field"><label for="agMat">Matricule</label><input type="text" id="agMat" class="input small" placeholder="ex. RAV-001"></div>
+        <div class="field"><label for="agNom">Nom</label><input type="text" id="agNom" class="input small"></div>
+      </div>
+      <button type="button" class="btn small" id="agSave">Enregistrer l'agent</button>
+    </div>
+    <div class="card">
+      <span class="legend">Fusionner la sauvegarde d'un autre agent</span>
+      <label class="obtn" for="importFile"><span>Choisir un fichier JSON</span><input type="file" id="importFile" accept="application/json,.json"></label>
+    </div>
+    <div class="card">
+      <span class="legend">Plan d'adressage</span>
+      <span class="sub" id="planInfo"></span>
+    </div>
+    <div class="card">
+      <span class="legend">Effacer les données de cet appareil</span>
+      <span class="hint">Seulement après avoir envoyé et vérifié la sauvegarde.</span>
+      <button type="button" class="btn danger" id="wipe">Effacer toutes les données</button>
+      <div id="wipeConfirm" style="display:flex;flex-direction:column;gap:10px" hidden>
+        <span class="err">Tous les liens non envoyés seront perdus. Confirmer ?</span>
+        <div class="row2">
+          <button type="button" class="btn ghost small" id="wipeNo">Annuler</button>
+          <button type="button" class="btn danger" id="wipeYes">Oui, tout effacer</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="dock pad" id="dock">
+  <button type="button" class="btn" id="nextBtn" disabled>Suivant : localiser le logement</button>
+  <button type="button" class="btn ghost" id="altBtn" hidden>Logement suivant</button>
+</div>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script type="application/json" id="plan">{"source":"liousax/kaloum-carte","fige_le":"2026-10-17","quartiers":[["Almamiya","88001",9.510468,-13.711324],["Manquepas","88002",9.507721,-13.709694],["Cité Petit Bateau","88003",9.518517,-13.702514]],"rues":[{"c":"SAMORY","n":"Avenue Samory Touré","a":"Boulevard de la Nation","p":"Samory Touré","s":"propose","q":["Manquepas","Cité Petit Bateau"],"d":[-13.710354,9.508907],"m":450,"o":[31786023],"g":[[[-13.706474,9.511289],[-13.706359,9.511357],[-13.706202,9.511451],[-13.706159,9.511477],[-13.704694,9.512358],[-13.703499,9.513109],[-13.702593,9.513679],[-13.702553,9.513701],[-13.701701,9.514179],[-13.701585,9.514239],[-13.701409,9.514346],[-13.701055,9.51456],[-13.70077,9.514732],[-13.699545,9.515482],[-13.699297,9.51563],[-13.698844,9.515908],[-13.698658,9.516022],[-13.698286,9.516249],[-13.698192,9.516306],[-13.697861,9.516508],[-13.697015,9.517019],[-13.696926,9.517074],[-13.696451,9.517365],[-13.695564,9.517923],[-13.695153,9.518164]],[[-13.694206,9.518741],[-13.694119,9.518853],[-13.694074,9.518969],[-13.694069,9.519073],[-13.694085,9.519247],[-13.69414,9.519366],[-13.694219,9.519495],[-13.694374,9.519789],[-13.694424,9.519935],[-13.694467,9.520104]],[[-13.694642,9.520087],[-13.694617,9.519983],[-13.694295,9.519476],[-13.694217,9.519331],[-13.694166,9.519208],[-13.694146,9.519087],[-13.694165,9.518954],[-13.694223,9.51884],[-13.69441,9.518656],[-13.695153,9.518164]],[[-13.695153,9.518164],[-13.69513,9.518178],[-13.694555,9.518483],[-13.694292,9.518662],[-13.694206,9.518741]],[[-13.710354,9.508907],[-13.709577,9.50937],[-13.709008,9.509718],[-13.708517,9.510036],[-13.708363,9.510148],[-13.706894,9.51103],[-13.706589,9.511219],[-13.706474,9.511289]]]},{"c":"ALFAYAYA","n":"Avenue Alfa Yaya Diallo","a":"Avenue du Port","p":"Alfa Yaya Diallo","s":"propose","q":["Almamiya","Cité Petit Bateau"],"d":[-13.713946,9.515367],"m":480,"o":[31786044],"g":[[[-13.694679,9.520264],[-13.694895,9.520294],[-13.69512,9.520203],[-13.695226,9.520144],[-13.695288,9.52011],[-13.695882,9.519634],[-13.696468,9.519163],[-13.697699,9.51824],[-13.698142,9.517871],[-13.698512,9.517619],[-13.698757,9.517465],[-13.698934,9.517429],[-13.699101,9.517422],[-13.699447,9.517482],[-13.699608,9.517519],[-13.700194,9.517627],[-13.701786,9.517926],[-13.702171,9.518002],[-13.703451,9.518231]],[[-13.703451,9.518231],[-13.703617,9.518255],[-13.703794,9.51824],[-13.703949,9.518192],[-13.704109,9.518115],[-13.705077,9.517325],[-13.705432,9.517022],[-13.707236,9.515565],[-13.707316,9.515521],[-13.707491,9.51544],[-13.707656,9.515405],[-13.707884,9.515414],[-13.708427,9.515517],[-13.709505,9.515722],[-13.710592,9.515918],[-13.712059,9.516216],[-13.712386,9.516276],[-13.712609,9.51627],[-13.712766,9.516252],[-13.71292,9.516225],[-13.713178,9.516167],[-13.713389,9.516072],[-13.713643,9.515854]],[[-13.713835,9.515322],[-13.71384,9.51546],[-13.713804,9.515581],[-13.713643,9.515854]],[[-13.713643,9.515854],[-13.713885,9.515572],[-13.713937,9.515484],[-13.713949,9.515436],[-13.713946,9.515367]]]},{"c":"OLYMPIO","n":"Rue Sylvanus Olympio","a":"Rue KA. 062","p":"Sylvanus Olympio","s":"propose","q":["Cité Petit Bateau"],"d":[-13.705829,9.515005],"m":112,"o":[31786104],"g":[[[-13.705829,9.515005],[-13.704132,9.514682],[-13.702612,9.514411],[-13.702476,9.514393],[-13.702406,9.514375],[-13.701585,9.514239],[-13.701248,9.514193],[-13.700871,9.514103]]]},{"c":"ACHEBE","n":"Rue Chinua Achebe","a":"Avenue du 25 Août 1958","p":"Chinua Achebe","s":"propose","q":["Almamiya","Manquepas"],"d":[-13.710448,9.508936],"m":92,"o":[36932966],"g":[[[-13.709665,9.512926],[-13.709792,9.512273],[-13.70993,9.511629],[-13.710047,9.511041],[-13.710159,9.510471],[-13.710254,9.509991],[-13.710349,9.509521],[-13.710448,9.508936]]]},{"c":"SANKARA","n":"Rue Thomas Sankara","a":"5e Avenue","p":"Thomas Sankara","s":"propose","q":["Almamiya","Manquepas"],"d":[-13.718804,9.509627],"m":296,"o":[38090574],"g":[[[-13.718804,9.509627],[-13.717441,9.50937],[-13.716325,9.509158],[-13.715115,9.508941],[-13.713814,9.508686],[-13.713605,9.50865],[-13.713282,9.508612],[-13.712938,9.508558],[-13.712268,9.508416],[-13.712118,9.508376],[-13.710625,9.508101],[-13.710143,9.508002],[-13.708966,9.507803],[-13.707342,9.507429],[-13.707222,9.507407],[-13.705609,9.507115]]]},{"c":"WALIGOUMBA","n":"Rue Tierno Aliou, Wali de Goumba","a":"Avenue M'Balia Camara","p":"Tierno Aliou, Wali de Goumba","s":"propose","q":["Almamiya","Manquepas"],"d":[-13.714156,9.504746],"m":106,"o":[38090594],"g":[[[-13.714156,9.504746],[-13.714229,9.504765],[-13.714272,9.504787],[-13.714306,9.504822],[-13.714316,9.504858],[-13.714316,9.504907],[-13.714237,9.505429],[-13.714103,9.506004],[-13.71401,9.506549],[-13.713917,9.507097],[-13.713728,9.507893],[-13.713637,9.508468],[-13.713605,9.50865],[-13.71354,9.508956],[-13.713467,9.509327]]]},{"c":"CHEIKHANTA","n":"Rue Cheikh Anta Diop","a":"3e Avenue","p":"Cheikh Anta Diop","s":"propose","q":["Almamiya","Manquepas"],"d":[-13.717727,9.507823],"m":266,"o":[38090753],"g":[[[-13.705903,9.505553],[-13.707521,9.505856],[-13.707648,9.50588],[-13.708023,9.505958],[-13.70927,9.506204],[-13.709529,9.506255],[-13.709679,9.506286],[-13.710912,9.506533],[-13.712419,9.506801],[-13.713917,9.507097],[-13.715194,9.50735],[-13.715421,9.507395],[-13.716608,9.507601],[-13.717727,9.507823]]]},{"c":"BOKARBIRO","n":"Avenue Bokar Biro Barry","a":"Avenue de la République","p":"Bokar Biro Barry","s":"propose","q":["Almamiya","Manquepas"],"d":[-13.714968,9.509647],"m":100,"o":[38631191],"g":[[[-13.704279,9.507951],[-13.704286,9.507829],[-13.7043,9.507779],[-13.70433,9.507742],[-13.704367,9.507716],[-13.704408,9.507696],[-13.70445,9.507683],[-13.704508,9.507676],[-13.704568,9.507676],[-13.705485,9.507854],[-13.706309,9.508008],[-13.707073,9.508148]],[[-13.714968,9.509647],[-13.714464,9.509547],[-13.714198,9.509488],[-13.713807,9.509402],[-13.713467,9.509327],[-13.711964,9.509077],[-13.711023,9.508905],[-13.710973,9.508896],[-13.710545,9.508824]],[[-13.710372,9.508799],[-13.709328,9.508585],[-13.708833,9.508489],[-13.708242,9.508374],[-13.707643,9.508258],[-13.70743,9.508217],[-13.707205,9.508173],[-13.707073,9.508148]],[[-13.704568,9.507676],[-13.704434,9.507643],[-13.704295,9.507616],[-13.70421,9.50759],[-13.704087,9.507538]]]},{"c":"SORYMAWDO","n":"Rue Almamy Ibrahima Sory Mawdo","a":"Boulevard Ahmed Sekou Touré","p":"Almamy Ibrahima Sory Mawdo","s":"propose","q":["Almamiya"],"d":[-13.713841,9.515039],"m":174,"o":[38652599],"g":[[[-13.713427,9.515022],[-13.713223,9.514985],[-13.71234,9.514826],[-13.71118,9.514609],[-13.710845,9.514546],[-13.710375,9.514455],[-13.709857,9.514354],[-13.709775,9.514338],[-13.709408,9.514258],[-13.709096,9.51419],[-13.707846,9.513948],[-13.706112,9.513611]],[[-13.713427,9.515022],[-13.713568,9.515091],[-13.713696,9.515176],[-13.713798,9.51528]],[[-13.713841,9.515039],[-13.713721,9.515049],[-13.713605,9.515044],[-13.713427,9.515022]]]},{"c":"MAMADYKEITA","n":"Rue Mamady Keïta","a":"1er Avenue","p":"Mamady Keïta","s":"propose","q":["Almamiya","Manquepas"],"d":[-13.719311,9.50706],"m":280,"o":[38663458],"g":[[[-13.70684,9.504606],[-13.707731,9.504762],[-13.707865,9.504786],[-13.709487,9.505101],[-13.711139,9.505462],[-13.712633,9.50571],[-13.714103,9.506004],[-13.715635,9.506299],[-13.716793,9.50653],[-13.717939,9.506775],[-13.718993,9.506946],[-13.71928,9.507022],[-13.719298,9.507039],[-13.719311,9.50706]]]},{"c":"KELETIGUI","n":"Rue Kélétigui Traoré","a":"Boulevard Diallo Telly","p":"Kélétigui Traoré","s":"propose","q":["Almamiya","Manquepas","Cité Petit Bateau"],"d":[-13.708053,9.503834],"m":300,"o":[38663459],"g":[[[-13.706589,9.511219],[-13.706865,9.509855],[-13.70705,9.508891],[-13.707205,9.508173],[-13.707342,9.507429],[-13.707493,9.506667],[-13.707648,9.50588],[-13.707757,9.505356],[-13.707865,9.504786],[-13.707982,9.504195],[-13.708053,9.503834]],[[-13.707073,9.508148],[-13.706941,9.508871],[-13.70685,9.509337],[-13.706756,9.509823],[-13.706694,9.510147],[-13.706647,9.510415],[-13.706577,9.510753],[-13.706542,9.510936],[-13.706474,9.511289]],[[-13.705432,9.517022],[-13.705568,9.516363],[-13.70565,9.515934],[-13.705739,9.51547],[-13.705829,9.515005],[-13.706112,9.513611],[-13.706303,9.512583],[-13.706366,9.512292],[-13.706504,9.511668],[-13.706525,9.511558],[-13.706589,9.511219]],[[-13.70789,9.503938],[-13.707731,9.504762],[-13.707622,9.505328],[-13.707521,9.505856],[-13.707369,9.506644],[-13.707222,9.507407],[-13.707073,9.508148]]]},{"c":"SIRADIOU","n":"Rue Siradiou Diallo","a":"Avenue Colonel Binta Pillote Diallo","p":"Siradiou Diallo","s":"propose","q":["Manquepas"],"d":[-13.714156,9.504746],"m":276,"o":[38663482],"g":[[[-13.714156,9.504746],[-13.713874,9.504687],[-13.713656,9.504647],[-13.712882,9.504508],[-13.712228,9.504375],[-13.711705,9.504272],[-13.711435,9.504219],[-13.709753,9.503917],[-13.709034,9.50379],[-13.708694,9.503729],[-13.708433,9.503683],[-13.708372,9.503685],[-13.708303,9.503698],[-13.708192,9.503741],[-13.708053,9.503834],[-13.70789,9.503938],[-13.707008,9.504499],[-13.70684,9.504606],[-13.706153,9.505047],[-13.706014,9.505132],[-13.704425,9.506129],[-13.704326,9.506232],[-13.70426,9.506373],[-13.704217,9.506587],[-13.70413,9.507022],[-13.704084,9.507449],[-13.704087,9.507538],[-13.704119,9.507642],[-13.704161,9.507722],[-13.704279,9.507951]]]},{"c":"MODIBO","n":"Rue Modibo Keïta","a":"1er Boulevard","p":"Modibo Keïta","s":"propose","q":["Almamiya"],"d":[-13.718254,9.505112],"m":98,"o":[38663784],"g":[[[-13.717441,9.50937],[-13.717567,9.508616],[-13.717645,9.508206],[-13.717727,9.507823],[-13.71779,9.507514],[-13.717939,9.506775],[-13.718291,9.505152],[-13.718278,9.505128],[-13.718254,9.505112]],[[-13.717111,9.511027],[-13.716946,9.51182],[-13.716843,9.512331],[-13.716723,9.512927],[-13.71649,9.514104]],[[-13.717149,9.510843],[-13.717111,9.511027]]]},{"c":"FARKA","n":"Rue Ali Farka Touré","a":"Rue KA 002","p":"Ali Farka Touré","s":"propose","q":["Manquepas"],"d":[-13.717137,9.504884],"m":72,"o":[38663844],"g":[[[-13.717137,9.504884],[-13.715136,9.504528],[-13.715003,9.504504],[-13.714395,9.504396],[-13.714156,9.504746]]]},{"c":"ABDELKADER","n":"Rue Émir Abdelkader","a":"Avenue Hadja Aissatou Mofory Bangoura","p":"Émir Abdelkader","s":"propose","q":["Almamiya","Manquepas"],"d":[-13.709753,9.503917],"m":140,"o":[38663961],"g":[[[-13.709753,9.503917],[-13.709604,9.504511],[-13.709487,9.505101],[-13.709377,9.505664],[-13.70927,9.506204],[-13.709211,9.506649],[-13.709118,9.507001],[-13.708966,9.507803],[-13.708833,9.508489],[-13.708692,9.509198],[-13.708579,9.509728],[-13.708543,9.509916],[-13.708517,9.510036]],[[-13.70852,9.510155],[-13.708497,9.51027],[-13.708402,9.510745],[-13.708285,9.511308],[-13.708142,9.51194],[-13.708014,9.51259]]]},{"c":"ALINESITOE","n":"Rue Aline Sitoé Diatta","a":"2e Avenue","p":"Aline Sitoé Diatta","s":"propose","q":["Almamiya","Manquepas"],"d":[-13.71552,9.506889],"m":210,"o":[38664144],"g":[[[-13.71552,9.506889],[-13.71401,9.506549],[-13.712524,9.506259],[-13.711025,9.505988],[-13.709377,9.505664],[-13.708075,9.505419],[-13.707894,9.505377],[-13.707828,9.505366],[-13.707757,9.505356],[-13.707683,9.505338],[-13.707622,9.505328],[-13.707211,9.505274],[-13.706153,9.505047]]]},{"c":"MANDELA","n":"Rue Nelson Mandela","a":"Avenue William Tubman","p":"Nelson Mandela","s":"propose","q":["Almamiya","Manquepas"],"d":[-13.718317,9.512074],"m":316,"o":[38698076],"g":[[[-13.718317,9.512074],[-13.717523,9.511923],[-13.71747,9.511913],[-13.716946,9.51182],[-13.715863,9.511573],[-13.714648,9.511312]],[[-13.714648,9.511312],[-13.713866,9.511172],[-13.713096,9.511041]],[[-13.713096,9.511041],[-13.71164,9.510756],[-13.711092,9.510651],[-13.710159,9.510471],[-13.70852,9.510155],[-13.708363,9.510148],[-13.706865,9.509855],[-13.706756,9.509823],[-13.705633,9.5096],[-13.705203,9.509515],[-13.704871,9.509451],[-13.704253,9.509332]]]},{"c":"NZINGA","n":"Rue Reine Njinga","a":"9e Avenue","p":"Reine Njinga","s":"propose","q":["Almamiya","Manquepas"],"d":[-13.717792,9.513127],"m":244,"o":[38698087],"g":[[[-13.717792,9.513127],[-13.717403,9.513055],[-13.71715,9.513007],[-13.716723,9.512927],[-13.716148,9.512817],[-13.715887,9.512767],[-13.715633,9.51273],[-13.715416,9.51271],[-13.715201,9.512661],[-13.715,9.51262],[-13.714531,9.512526],[-13.714423,9.512486],[-13.713612,9.512322],[-13.713134,9.512225],[-13.712874,9.512181],[-13.711408,9.511935],[-13.710871,9.511815],[-13.70993,9.511629],[-13.70961,9.511581],[-13.709101,9.511457],[-13.708851,9.511454],[-13.708621,9.511399],[-13.708526,9.511368],[-13.708285,9.511308],[-13.706894,9.51103]]]},{"c":"DINAHSALIFOU","n":"Avenue Dinah Salifou","a":"Rond-Point du Port","p":"Dinah Salifou","s":"propose","q":["Almamiya"],"d":[-13.714104,9.515081],"m":26,"o":[38698125],"g":[[[-13.714104,9.515081],[-13.714059,9.515036],[-13.714001,9.515009],[-13.713937,9.515003],[-13.713886,9.515015],[-13.713841,9.515039],[-13.713805,9.515076],[-13.71378,9.51512],[-13.713769,9.515175],[-13.713775,9.51523],[-13.713798,9.51528],[-13.713835,9.515322],[-13.713883,9.515351],[-13.713946,9.515367],[-13.713964,9.515368],[-13.713994,9.51536],[-13.714046,9.515339],[-13.71409,9.515303],[-13.71412,9.515256],[-13.714135,9.515202],[-13.71413,9.515139],[-13.714104,9.515081]]]},{"c":"NYERERE","n":"Rue Julius Nyerere","a":"Avenue de la Gare","p":"Julius Nyerere","s":"propose","q":["Almamiya"],"d":[-13.714169,9.513811],"m":176,"o":[38698141],"g":[[[-13.714169,9.513811],[-13.712615,9.513479],[-13.711176,9.51317],[-13.709665,9.512926],[-13.708014,9.51259],[-13.707185,9.51247],[-13.706366,9.512292]]]},{"c":"SENGHOR","n":"Rue Léopold Sédar Senghor","a":"Rue KA. 040","p":"Léopold Sédar Senghor","s":"propose","q":["Almamiya"],"d":[-13.712749,9.512801],"m":140,"o":[38698144],"g":[[[-13.712749,9.512801],[-13.711292,9.512553],[-13.709792,9.512273],[-13.708142,9.51194],[-13.706504,9.511668]]]},{"c":"ROSAPARKS","n":"Rue Rosa Parks","a":"Rue KA. 028","p":"Rosa Parks","s":"propose","q":["Almamiya"],"d":[-13.714732,9.510874],"m":36,"o":[38698200],"g":[[[-13.714732,9.510874],[-13.714615,9.510856],[-13.714504,9.510837],[-13.713849,9.510711],[-13.713463,9.510643],[-13.713187,9.510611]]]},{"c":"AHMEDBABA","n":"Rue Ahmed Baba","a":"Avenue Louis Lansana Beavogui","p":"Ahmed Baba","s":"propose","q":["Almamiya","Manquepas"],"d":[-13.717137,9.504884],"m":100,"o":[38698229],"g":[[[-13.717137,9.504884],[-13.716793,9.50653],[-13.716608,9.507601],[-13.716533,9.508079],[-13.716478,9.508426],[-13.716325,9.509158],[-13.716309,9.509258]],[[-13.716071,9.510544],[-13.71605,9.510633],[-13.715998,9.510895],[-13.715863,9.511573],[-13.715633,9.51273],[-13.715536,9.513229],[-13.715433,9.513737],[-13.715399,9.513889]]]},{"c":"IBNBATTUTA","n":"Rue Ibn Battuta","a":"Avenue du 5 Septembre 2021","p":"Ibn Battuta","s":"propose","q":["Almamiya"],"d":[-13.716194,9.509899],"m":28,"o":[38698237],"g":[[[-13.714968,9.509647],[-13.715139,9.509679],[-13.716194,9.509899]]]},{"c":"MOMBEYA","n":"Avenue Tierno Samba Mombéya","a":"11e Avenue","p":"Tierno Samba Mombéya","s":"propose","q":["Almamiya","Cité Petit Bateau"],"d":[-13.706112,9.513611],"m":112,"o":[38698336],"g":[[[-13.706112,9.513611],[-13.704398,9.513281],[-13.704201,9.513243],[-13.703966,9.513198],[-13.70394,9.513192],[-13.703499,9.513109],[-13.702741,9.512967]],[[-13.702741,9.512967],[-13.70191,9.512797],[-13.701137,9.51264]]]},{"c":"MORYKANTE","n":"Avenue Mory Kanté","a":"11e Boulevard","p":"Mory Kanté","s":"propose","q":["Cité Petit Bateau"],"d":[-13.701444,9.511063],"m":150,"o":[38698372],"g":[[[-13.700871,9.514103],[-13.700772,9.514695],[-13.70077,9.514732],[-13.700561,9.515773],[-13.700545,9.515876],[-13.700515,9.516056],[-13.700368,9.516776],[-13.700194,9.517627]],[[-13.701137,9.51264],[-13.701097,9.512852],[-13.700995,9.513402],[-13.700871,9.514103]],[[-13.701444,9.511063],[-13.701396,9.511331],[-13.701275,9.511939],[-13.701137,9.51264]]]},{"c":"TOUSSAINT","n":"Rue Toussaint Louverture","a":"Rue KA. 048","p":"Toussaint Louverture","s":"propose","q":["Cité Petit Bateau"],"d":[-13.702886,9.51227],"m":38,"o":[38698401],"g":[[[-13.702886,9.51227],[-13.702051,9.512113],[-13.702045,9.512111],[-13.70196,9.512095],[-13.701861,9.512071],[-13.701662,9.512026],[-13.701275,9.511939]]]},{"c":"MLK","n":"Rue Martin Luther King","a":"Rue KA. 052","p":"Martin Luther King","s":"propose","q":["Cité Petit Bateau"],"d":[-13.702553,9.513701],"m":36,"o":[38698406],"g":[[[-13.700995,9.513402],[-13.701754,9.513547],[-13.702553,9.513701]]]},{"c":"BOGANDA","n":"Rue Barthélemy Boganda","a":"9e Boulevard","p":"Barthélemy Boganda","s":"propose","q":["Cité Petit Bateau"],"d":[-13.704398,9.513281],"m":114,"o":[38698539],"g":[[[-13.704398,9.513281],[-13.704261,9.514004],[-13.704132,9.514682],[-13.704038,9.51514],[-13.703957,9.51561],[-13.703866,9.516041],[-13.703763,9.516431],[-13.70362,9.517374],[-13.703554,9.51771],[-13.703451,9.518231]]]},{"c":"MAATHAI","n":"Rue Wangari Maathai","a":"Rue KA. 074","p":"Wangari Maathai","s":"propose","q":["Cité Petit Bateau"],"d":[-13.703763,9.516431],"m":100,"o":[38698548],"g":[[[-13.703763,9.516431],[-13.702103,9.516165],[-13.700708,9.515906],[-13.700545,9.515876],[-13.700452,9.51586],[-13.699297,9.51563]]]},{"c":"SALIFKEITA","n":"Rue Salif Keïta","a":"Rue KA.068","p":"Salif Keïta","s":"propose","q":["Cité Petit Bateau"],"d":[-13.705568,9.516363],"m":38,"o":[38698554],"g":[[[-13.705568,9.516363],[-13.703866,9.516041]]]},{"c":"TUBMAN","n":"Rue Harriet Tubman","a":"Rue KA. 082","p":"Harriet Tubman","s":"propose","q":["Cité Petit Bateau"],"d":[-13.69853,9.517294],"m":34,"o":[38698564],"g":[[[-13.697015,9.517019],[-13.69853,9.517294]]]},{"c":"FANON","n":"Rue Frantz Fanon","a":"Rue KA. 049","p":"Frantz Fanon","s":"propose","q":["Cité Petit Bateau"],"d":[-13.696926,9.517074],"m":32,"o":[38698570],"g":[[[-13.696926,9.517074],[-13.697274,9.517641],[-13.697566,9.518057],[-13.697699,9.51824]]]},{"c":"FELA","n":"Rue Fela Kuti","a":"Rue KA. 084","p":"Fela Kuti","s":"propose","q":["Cité Petit Bateau"],"d":[-13.697274,9.517641],"m":78,"o":[38698573],"g":[[[-13.697274,9.517641],[-13.695913,9.518474],[-13.694295,9.519476]]]},{"c":"SIRLEAF","n":"Rue Ellen Johnson Sirleaf","a":"Rue KA. 051","p":"Ellen Johnson Sirleaf","s":"propose","q":["Cité Petit Bateau"],"d":[-13.69536,9.517481],"m":46,"o":[38698576],"g":[[[-13.696468,9.519163],[-13.6963,9.518995],[-13.695913,9.518474],[-13.695725,9.518202],[-13.695638,9.518067],[-13.695564,9.517923],[-13.695435,9.517644],[-13.69536,9.517481]]]},{"c":"CAMARALAYE","n":"Avenue Camara Laye","a":"Boulevard Général Lansana Conté","p":"Camara Laye","s":"propose","q":["Almamiya"],"d":[-13.715635,9.506299],"m":198,"o":[38894956],"g":[[[-13.714002,9.514686],[-13.714033,9.514521],[-13.714169,9.513811],[-13.714423,9.512486],[-13.714648,9.511312],[-13.714732,9.510874],[-13.714821,9.51041],[-13.714865,9.510181],[-13.714968,9.509647]],[[-13.714104,9.515081],[-13.714059,9.514977],[-13.714034,9.514876],[-13.714002,9.514686]],[[-13.714002,9.514686],[-13.713886,9.515015]],[[-13.714968,9.509647],[-13.715115,9.508941],[-13.715226,9.508363],[-13.715264,9.508175],[-13.715421,9.507395],[-13.715441,9.507299],[-13.71552,9.506889],[-13.715604,9.506457],[-13.715635,9.506299]]]},{"c":"YACINE","n":"Avenue Yacine Diallo","a":"10e Boulevard","p":"Yacine Diallo","s":"propose","q":["Manquepas","Cité Petit Bateau"],"d":[-13.703269,9.510399],"m":172,"o":[38895080],"g":[[[-13.702593,9.513679],[-13.702517,9.514121],[-13.702503,9.514206],[-13.702486,9.514322],[-13.702476,9.514393],[-13.702434,9.51458],[-13.702279,9.515289],[-13.702103,9.516165],[-13.701942,9.517054],[-13.701786,9.517926]],[[-13.703269,9.510399],[-13.703195,9.510764],[-13.703147,9.511014],[-13.703016,9.511645],[-13.702886,9.51227],[-13.702741,9.512967],[-13.702593,9.513679]]]},{"c":"SOUNDIATA","n":"Rue Soundiata Keïta","a":"Boulevard Maritime","p":"Soundiata Keïta","s":"propose","q":["Almamiya"],"d":[-13.719311,9.50706],"m":212,"o":[38895155],"g":[[[-13.719311,9.50706],[-13.719314,9.507091],[-13.719312,9.507125],[-13.719173,9.507751],[-13.719039,9.508406],[-13.719023,9.508487],[-13.718937,9.50891],[-13.718865,9.509269],[-13.718804,9.509627],[-13.718317,9.512074],[-13.7182,9.512637],[-13.717891,9.512992],[-13.717792,9.513127],[-13.717586,9.514149],[-13.71753,9.514228],[-13.717438,9.514266],[-13.717185,9.514243],[-13.716896,9.514183],[-13.71649,9.514104],[-13.715735,9.513975]],[[-13.714249,9.515303],[-13.714135,9.515202]],[[-13.714046,9.515339],[-13.714249,9.515303]],[[-13.715735,9.513975],[-13.715632,9.513958],[-13.715592,9.513952],[-13.715533,9.513944],[-13.715477,9.513933]],[[-13.715471,9.514047],[-13.715546,9.514019],[-13.715601,9.514003],[-13.715639,9.513996],[-13.715735,9.513975]],[[-13.715312,9.514039],[-13.715301,9.514104],[-13.715282,9.514196],[-13.715267,9.514312]],[[-13.715267,9.514312],[-13.715334,9.514214],[-13.715372,9.514157],[-13.71542,9.51408]],[[-13.715267,9.514312],[-13.715229,9.514443],[-13.715096,9.514712],[-13.714949,9.514862],[-13.714666,9.515125],[-13.71453,9.515201],[-13.714426,9.515244],[-13.714249,9.515303]]]},{"c":"FODEBA","n":"Avenue Keïta Fodéba","a":"Corniche Sud","p":"Keïta Fodéba","s":"propose","q":["Cité Petit Bateau"],"d":[-13.700871,9.514103],"m":428,"o":[38895260],"g":[[[-13.700871,9.514103],[-13.699845,9.513881],[-13.699574,9.513831],[-13.699266,9.513774],[-13.698058,9.513542],[-13.697909,9.513518],[-13.697859,9.513517],[-13.697821,9.513525],[-13.697789,9.513541],[-13.69776,9.513562],[-13.697744,9.513591],[-13.697696,9.513782],[-13.697654,9.514006],[-13.697446,9.5152],[-13.69741,9.515333],[-13.697368,9.515452],[-13.697315,9.51555],[-13.697249,9.515625],[-13.697175,9.515686],[-13.696793,9.51592],[-13.696452,9.516132],[-13.696364,9.516203],[-13.696279,9.516288],[-13.69623,9.516352],[-13.695994,9.516665],[-13.695508,9.517311],[-13.695433,9.517408],[-13.69536,9.517481],[-13.695298,9.517522],[-13.695212,9.517559],[-13.695061,9.517603],[-13.694846,9.517645],[-13.694474,9.517698],[-13.693855,9.517837],[-13.693741,9.517883],[-13.69364,9.517938],[-13.693482,9.518049],[-13.693377,9.518125]],[[-13.693377,9.518125],[-13.693302,9.518202],[-13.693177,9.518341],[-13.693032,9.518527],[-13.692759,9.518892],[-13.692476,9.51926],[-13.692174,9.519637],[-13.692061,9.519747],[-13.691976,9.519821],[-13.691862,9.51989],[-13.691719,9.51997],[-13.691525,9.520046],[-13.691285,9.520105],[-13.691035,9.520126],[-13.690435,9.520143],[-13.69012,9.520161],[-13.689952,9.520197],[-13.689788,9.520246],[-13.689666,9.520304],[-13.689536,9.520383],[-13.689359,9.520527],[-13.689021,9.520886],[-13.688643,9.521427],[-13.688246,9.521957],[-13.688062,9.52219],[-13.687854,9.522467],[-13.687758,9.522594],[-13.687567,9.522838],[-13.68677,9.523885]]]},{"c":"MBALIA","n":"Avenue M'Balia Camara","a":"Autoroute Fidel Castro","p":"M'Balia Camara","s":"propose","q":["Cité Petit Bateau"],"d":[-13.694583,9.520326],"m":188,"o":[140784959],"g":[[[-13.688146,9.52555],[-13.688213,9.525452],[-13.68846,9.525139],[-13.688792,9.524739],[-13.689243,9.524199],[-13.689708,9.523578],[-13.690256,9.522868],[-13.690413,9.522674],[-13.690606,9.522436],[-13.690672,9.522372],[-13.690902,9.522153],[-13.691254,9.521846],[-13.69142,9.521743],[-13.691825,9.521515],[-13.692362,9.521263],[-13.692656,9.521147],[-13.693133,9.520949],[-13.693454,9.520815],[-13.69406,9.520556],[-13.694583,9.520326]],[[-13.694435,9.520161],[-13.694323,9.520278],[-13.69423,9.52036],[-13.693464,9.520675],[-13.692493,9.521111],[-13.691724,9.521444],[-13.69136,9.52164],[-13.69109,9.521828],[-13.690727,9.522134],[-13.690558,9.522308],[-13.690483,9.522385],[-13.690207,9.522712],[-13.689137,9.524126],[-13.688886,9.524475],[-13.688598,9.524833],[-13.688386,9.525085],[-13.688078,9.525449]]]},{"c":"DIALLOTELLI","n":"Avenue Diallo Telli","a":"Rond-Point Samory Touré","p":"Diallo Telli","s":"propose","q":["Cité Petit Bateau"],"d":[-13.68657,9.524393],"m":20,"o":[174022132],"g":[[[-13.686345,9.524055],[-13.686313,9.524085],[-13.686288,9.524121],[-13.686285,9.524128],[-13.68627,9.524161],[-13.686263,9.524205],[-13.686263,9.524212]],[[-13.68657,9.524393],[-13.686581,9.524388],[-13.68662,9.524356],[-13.68665,9.524314],[-13.686668,9.524267],[-13.686675,9.524217],[-13.686669,9.52417],[-13.686652,9.524126],[-13.68661,9.524076],[-13.686594,9.524057],[-13.686512,9.524019],[-13.686469,9.524015],[-13.686425,9.524019],[-13.686383,9.524033],[-13.686345,9.524055]]]},{"c":"WANDEL","n":"Avenue Momo Wandel Soumah","a":"le Niger","p":"Momo Wandel Soumah","s":"propose","q":["Cité Petit Bateau"],"d":[-13.686652,9.524126],"m":14,"o":[174022136],"g":[[[-13.686652,9.524126],[-13.686677,9.524079],[-13.686719,9.523995],[-13.68677,9.523885]],[[-13.68677,9.523885],[-13.686512,9.524019]]]},{"c":"HAMPATE","n":"Rue Amadou Hampâté Bâ","a":"4e Avenue","p":"Amadou Hampâté Bâ","s":"propose","q":["Almamiya","Manquepas"],"d":[-13.717567,9.508616],"m":266,"o":[217967223],"g":[[[-13.717567,9.508616],[-13.716478,9.508426],[-13.715394,9.508203],[-13.715264,9.508175],[-13.713728,9.507893],[-13.712264,9.507618],[-13.71151,9.50745],[-13.71114,9.50738],[-13.710954,9.507348],[-13.710781,9.507311],[-13.710276,9.507224],[-13.709118,9.507001],[-13.707493,9.506667],[-13.707369,9.506644],[-13.705747,9.506349]]]},{"c":"JEANNEMARTIN","n":"Avenue Jeanne Martin Cissé","a":"Pont du 8 Novembre","p":"Jeanne Martin Cissé","s":"propose","q":["Cité Petit Bateau"],"d":[-13.688005,9.525216],"m":18,"o":[291395359],"g":[[[-13.688426,9.525818],[-13.688258,9.525567],[-13.688132,9.525392],[-13.688062,9.525295],[-13.688005,9.525216]],[[-13.687946,9.525253],[-13.688007,9.525332],[-13.688077,9.525428],[-13.688206,9.525603],[-13.688296,9.525735],[-13.688369,9.525858]]]},{"c":"ETOO","n":"Rue Samuel Eto'o","a":"Rue KA. 045","p":"Samuel Eto'o","s":"propose","q":["Cité Petit Bateau"],"d":[-13.699845,9.513881],"m":38,"o":[338983909],"g":[[[-13.699845,9.513881],[-13.699742,9.514501],[-13.699629,9.515039],[-13.699545,9.515482]]]},{"c":"SAIFOULAYE","n":"Avenue Saïfoulaye Diallo","a":"Avenue Hadja Saran Daraba","p":"Saïfoulaye Diallo","s":"propose","q":["Almamiya","Manquepas"],"d":[-13.713322,9.502619],"m":148,"o":[375144908],"g":[[[-13.711964,9.509077],[-13.712118,9.508376],[-13.712264,9.507618],[-13.712348,9.50719],[-13.712419,9.506801],[-13.712524,9.506259],[-13.712633,9.50571],[-13.712751,9.505116],[-13.712882,9.504508],[-13.713098,9.503549],[-13.713322,9.502619]]]},{"c":"DROGBA","n":"Rue Didier Drogba","a":"Rue KA. 034","p":"Didier Drogba","s":"propose","q":["Almamiya"],"d":[-13.710047,9.511041],"m":38,"o":[382544391],"g":[[[-13.708402,9.510745],[-13.708488,9.510766],[-13.708789,9.510823],[-13.709177,9.510877],[-13.709662,9.510974],[-13.710047,9.511041]]]},{"c":"NEWTON","n":"Rue Isaac Newton","a":"Rue KA. 036","p":"Isaac Newton","s":"propose","q":["Manquepas"],"d":[-13.706647,9.510415],"m":24,"o":[382547001],"g":[[[-13.705623,9.510217],[-13.706647,9.510415]]]},{"c":"MANSAMOUSSA","n":"Rue Mansa Moussa","a":"Rue KA. 088","p":"Mansa Moussa","s":"propose","q":["Cité Petit Bateau"],"d":[-13.70394,9.513192],"m":256,"o":[489398758],"g":[[[-13.70394,9.513192],[-13.702845,9.51404],[-13.702486,9.514322],[-13.702406,9.514375],[-13.700561,9.515773],[-13.700452,9.51586],[-13.699838,9.516321],[-13.699239,9.51676],[-13.699167,9.516813],[-13.69853,9.517294],[-13.698428,9.517388],[-13.698085,9.517667],[-13.697566,9.518057],[-13.696839,9.518586],[-13.6963,9.518995],[-13.695934,9.519218],[-13.695182,9.519655],[-13.694617,9.519983]]]},{"c":"ANNAN","n":"Rue Kofi Annan","a":"Avenue Docteur Rober Accar Nadjib","p":"Kofi Annan","s":"propose","q":["Manquepas"],"d":[-13.706014,9.505132],"m":98,"o":[489398774],"g":[[[-13.705145,9.509418],[-13.705187,9.509279],[-13.705239,9.509051],[-13.705351,9.508573],[-13.705485,9.507854],[-13.705609,9.507115],[-13.705747,9.506349],[-13.705903,9.505553],[-13.706014,9.505132]]]},{"c":"GURNAH","n":"Rue Abdulrazak Gurnah","a":"7e Avenue","p":"Abdulrazak Gurnah","s":"propose","q":["Almamiya"],"d":[-13.717149,9.510843],"m":52,"o":[549261646],"g":[[[-13.716134,9.51065],[-13.717149,9.510843]],[[-13.714821,9.51041],[-13.715795,9.510587],[-13.71605,9.510633],[-13.716134,9.51065]]]},{"c":"DEMBA","n":"Avenue Demba Camara","a":"Boulevard de Boulbinet","p":"Demba Camara","s":"propose","q":["Manquepas"],"d":[-13.704279,9.507951],"m":90,"o":[571806434],"g":[[[-13.704448,9.508266],[-13.704545,9.508422],[-13.705145,9.509418],[-13.705203,9.509515],[-13.70529,9.509661],[-13.705623,9.510217],[-13.705914,9.510657],[-13.706039,9.510848],[-13.706359,9.511357]],[[-13.704279,9.507951],[-13.704343,9.508077],[-13.704448,9.508266]]]},{"c":"ASANTEWAA","n":"Rue Yaa Asantewaa","a":"Avenue du 3 Avril 1984","p":"Yaa Asantewaa","s":"propose","q":["Almamiya","Manquepas"],"d":[-13.714821,9.51041],"m":230,"o":[605957608],"g":[[[-13.714821,9.51041],[-13.714298,9.5103],[-13.713332,9.510098],[-13.711824,9.509782],[-13.710349,9.509521],[-13.709577,9.50937],[-13.708692,9.509198],[-13.70705,9.508891],[-13.706941,9.508871],[-13.705351,9.508573],[-13.704545,9.508422]]]},{"c":"AVICENNE","n":"Rue Avicenne","a":"Rue KA. 042","p":"Avicenne","s":"propose","q":["Almamiya"],"d":[-13.715296,9.513981],"m":26,"o":[605957609],"g":[[[-13.715296,9.513981],[-13.715005,9.513927],[-13.714169,9.513811]]]},{"c":"TUTU","n":"Rue Desmond Tutu","a":"Avenue Hadja Rabiatou Serah Diallo","p":"Desmond Tutu","s":"propose","q":["Manquepas"],"d":[-13.711435,9.504219],"m":104,"o":[615565335],"g":[[[-13.710496,9.508759],[-13.710625,9.508101],[-13.710781,9.507311],[-13.710836,9.506927],[-13.710912,9.506533],[-13.711025,9.505988],[-13.711139,9.505462],[-13.711266,9.504862],[-13.711435,9.504219]]]},{"c":"MAFORY","n":"Avenue Hadja Mafory Bangoura","a":"Rond-Point de Nimba","p":"Hadja Mafory Bangoura","s":"propose","q":["Cité Petit Bateau"],"d":[-13.694583,9.520326],"m":20,"o":[636381976],"g":[[[-13.694583,9.520326],[-13.694621,9.520316],[-13.694654,9.520294],[-13.694679,9.520264],[-13.694695,9.520228],[-13.694698,9.520188],[-13.69469,9.52015],[-13.694671,9.520115],[-13.694642,9.520087],[-13.694608,9.52007],[-13.69457,9.520063],[-13.694532,9.520067],[-13.694497,9.520081],[-13.694467,9.520104],[-13.694448,9.520131],[-13.694435,9.520161],[-13.69443,9.520198],[-13.694436,9.520235],[-13.694453,9.520268],[-13.694477,9.520296],[-13.694509,9.520316],[-13.694546,9.520326],[-13.694583,9.520326]]]},{"c":"FUNMILAYO","n":"Rue Funmilayo Ransome-Kuti","a":"Avenue du 1er Mars 1960","p":"Funmilayo Ransome-Kuti","s":"propose","q":["Almamiya"],"d":[-13.713467,9.509327],"m":96,"o":[686125825],"g":[[[-13.713467,9.509327],[-13.713336,9.510078],[-13.713335,9.510084],[-13.713332,9.510098],[-13.713187,9.510611],[-13.713096,9.511041],[-13.713032,9.511374],[-13.712874,9.512181],[-13.712749,9.512801],[-13.712615,9.513479]]]},{"c":"SASSINE","n":"Rue Williams Sassine","a":"Pénétrante du Port Autonome de Conakry","p":"Williams Sassine","s":"propose","q":["Almamiya","Cité Petit Bateau"],"d":[-13.715424,9.516648],"m":214,"o":[1138157897],"g":[[[-13.715424,9.516648],[-13.715133,9.516669],[-13.715044,9.516686],[-13.713534,9.516986],[-13.713038,9.517042],[-13.712725,9.517052],[-13.712563,9.517009],[-13.712429,9.51695],[-13.712107,9.516686],[-13.711872,9.516435],[-13.71172,9.516327],[-13.711556,9.516254],[-13.711285,9.516207],[-13.71057,9.516102],[-13.710129,9.516058],[-13.709965,9.516083],[-13.709841,9.516109],[-13.709775,9.516156],[-13.709678,9.516308],[-13.709615,9.516376],[-13.709522,9.516453],[-13.709229,9.516602],[-13.708543,9.516912],[-13.707619,9.51733],[-13.706571,9.517878]],[[-13.690413,9.522674],[-13.690472,9.522643],[-13.690588,9.522588],[-13.690626,9.522577],[-13.690763,9.522552],[-13.69084,9.52256],[-13.691319,9.522822],[-13.692014,9.523206],[-13.692057,9.523225],[-13.692093,9.523234],[-13.692171,9.523253]],[[-13.698357,9.521086],[-13.699935,9.520527],[-13.701408,9.519987],[-13.702055,9.519748],[-13.702619,9.519501],[-13.70367,9.519075],[-13.703955,9.518983],[-13.704311,9.518865]],[[-13.704264,9.518785],[-13.703871,9.518913],[-13.703473,9.519056],[-13.703146,9.519192],[-13.702772,9.519356],[-13.702351,9.519546],[-13.702013,9.519688],[-13.70122,9.519982],[-13.69902,9.520785],[-13.69799,9.52114]],[[-13.692296,9.523185],[-13.692229,9.523192],[-13.692163,9.523186],[-13.692139,9.523181],[-13.692089,9.52316],[-13.691175,9.522661],[-13.690923,9.522518],[-13.690788,9.522442],[-13.690672,9.522372],[-13.690558,9.522308]]]},{"c":"MARIAMABA","n":"Rue Mariama Bâ","a":"AVENUE Dinah Salifou","p":"Mariama Bâ","s":"propose","q":["Almamiya"],"d":[-13.711964,9.509077],"m":94,"o":[1312733358],"g":[[[-13.711176,9.51317],[-13.711292,9.512553],[-13.711408,9.511935],[-13.71164,9.510756],[-13.711729,9.51028],[-13.711824,9.509782],[-13.711964,9.509077]]]},{"c":"FANTAMADY","n":"Avenue Cheick Fanta Mady Chérif","a":"Avenue Général Noumandjan Kéita","p":"Cheick Fanta Mady Chérif","s":"propose","q":["Manquepas"],"d":[-13.704448,9.508266],"m":60,"o":[1315065250],"g":[[[-13.704448,9.508266],[-13.704253,9.509332],[-13.704211,9.509593],[-13.704182,9.509734],[-13.704166,9.509786],[-13.70413,9.509835],[-13.703875,9.510017],[-13.703729,9.510117],[-13.703579,9.510208],[-13.703269,9.510399]]]},{"c":"BIKO","n":"Rue Steve Biko","a":null,"p":"Steve Biko","s":"propose","q":["Manquepas"],"d":[-13.714237,9.505429],"m":104,"o":[38664159],"g":[[[-13.709604,9.504511],[-13.711266,9.504862],[-13.712751,9.505116],[-13.713542,9.505283],[-13.714237,9.505429]]]},{"c":"MANU","n":"Rue Manu Dibango","a":null,"p":"Manu Dibango","s":"propose","q":["Manquepas"],"d":[-13.712348,9.50719],"m":70,"o":[38664205],"g":[[[-13.712348,9.50719],[-13.710836,9.506927],[-13.709957,9.506778],[-13.709554,9.506711],[-13.709211,9.506649]]]},{"c":"MANE","n":"Rue Sadio Mané","a":null,"p":"Sadio Mané","s":"propose","q":["Cité Petit Bateau"],"d":[-13.703016,9.511645],"m":38,"o":[38698400],"g":[[[-13.703016,9.511645],[-13.702184,9.511482],[-13.701396,9.511331]]]},{"c":"SARO","n":"Rue Ken Saro-Wiwa","a":null,"p":"Ken Saro-Wiwa","s":"propose","q":["Cité Petit Bateau"],"d":[-13.70234,9.510727],"m":80,"o":[38698407],"g":[[[-13.701585,9.514239],[-13.701754,9.513547],[-13.70191,9.512797],[-13.702051,9.512113],[-13.702184,9.511482],[-13.702312,9.510863],[-13.70234,9.510727]]]},{"c":"DUBOIS","n":"Rue W. E. B. Du Bois","a":null,"p":"W. E. B. Du Bois","s":"propose","q":["Almamiya"],"d":[-13.71234,9.514826],"m":32,"o":[38698453],"g":[[[-13.712059,9.516216],[-13.71234,9.514826]]]},{"c":"CESAIRE","n":"Rue Aimé Césaire","a":null,"p":"Aimé Césaire","s":"propose","q":["Almamiya"],"d":[-13.710845,9.514546],"m":32,"o":[38698455],"g":[[[-13.710592,9.515918],[-13.710845,9.514546]]]},{"c":"NGUGI","n":"Rue Ngũgĩ wa Thiong'o","a":null,"p":"Ngũgĩ wa Thiong'o","s":"propose","q":["Cité Petit Bateau"],"d":[-13.70565,9.515934],"m":90,"o":[38698544],"g":[[[-13.70565,9.515934],[-13.703957,9.51561],[-13.702279,9.515289],[-13.701674,9.515173]]]},{"c":"SEMBENE","n":"Rue Ousmane Sembène","a":null,"p":"Ousmane Sembène","s":"propose","q":["Cité Petit Bateau"],"d":[-13.70362,9.517374],"m":88,"o":[38698552],"g":[[[-13.70362,9.517374],[-13.701942,9.517054],[-13.700368,9.516776],[-13.70021,9.516772],[-13.700046,9.516734],[-13.699729,9.516645]]]},{"c":"YOUSSOU","n":"Rue Youssou N'Dour","a":null,"p":"Youssou N'Dour","s":"propose","q":["Cité Petit Bateau"],"d":[-13.705739,9.51547],"m":40,"o":[38698553],"g":[[[-13.705739,9.51547],[-13.704891,9.515314],[-13.704038,9.51514]]]},{"c":"ADICHIE","n":"Rue Chimamanda Ngozi Adichie","a":null,"p":"Chimamanda Ngozi Adichie","s":"propose","q":["Cité Petit Bateau"],"d":[-13.699266,9.513774],"m":50,"o":[38698560],"g":[[[-13.699266,9.513774],[-13.699146,9.514388],[-13.699044,9.514895],[-13.698844,9.515908]]]},{"c":"BALDWIN","n":"Rue James Baldwin","a":null,"p":"James Baldwin","s":"propose","q":["Cité Petit Bateau"],"d":[-13.699629,9.515039],"m":14,"o":[38698561],"g":[[[-13.699044,9.514895],[-13.699629,9.515039]]]},{"c":"ANOM1","n":null,"a":null,"p":null,"s":"a_nommer","q":["Cité Petit Bateau"],"d":[-13.686951,9.524527],"m":10,"o":[38846681],"g":[[[-13.686581,9.524388],[-13.686951,9.524527]]]},{"c":"HUGO","n":"Rue Victor Hugo","a":null,"p":"Victor Hugo","s":"propose","q":["Cité Petit Bateau"],"d":[-13.701786,9.517926],"m":20,"o":[38893882],"g":[[[-13.701786,9.517926],[-13.701661,9.518601],[-13.701641,9.518754]]]},{"c":"IBNKHALDOUN","n":"Rue Ibn Khaldoun","a":null,"p":"Ibn Khaldoun","s":"propose","q":["Almamiya","Manquepas"],"d":[-13.718254,9.505112],"m":26,"o":[38895173],"g":[[[-13.718254,9.505112],[-13.717137,9.504884]]]},{"c":"ANOM2","n":null,"a":null,"p":null,"s":"a_nommer","q":["Cité Petit Bateau"],"d":[-13.686288,9.524121],"m":10,"o":[174022129],"g":[[[-13.686288,9.524121],[-13.686167,9.524137],[-13.686082,9.524149],[-13.686028,9.524162],[-13.685972,9.524185],[-13.685922,9.524208]]]},{"c":"GALILEE","n":"Rue Galilée","a":null,"p":"Galilée","s":"propose","q":["Cité Petit Bateau"],"d":[-13.697315,9.51555],"m":26,"o":[217952237],"g":[[[-13.697861,9.516508],[-13.697315,9.51555]]]},{"c":"GANDHI","n":"Rue Mahatma Gandhi","a":null,"p":"Mahatma Gandhi","s":"propose","q":["Almamiya"],"d":[-13.719023,9.508487],"m":32,"o":[217967228],"g":[[[-13.719023,9.508487],[-13.718984,9.508479],[-13.718306,9.508341],[-13.717645,9.508206]]]},{"c":"UMNYOBE","n":"Rue Ruben Um Nyobè","a":null,"p":"Ruben Um Nyobè","s":"propose","q":["Cité Petit Bateau"],"d":[-13.704201,9.513243],"m":138,"o":[269867009],"g":[[[-13.699281,9.516978],[-13.699729,9.516645],[-13.700131,9.516333],[-13.700515,9.516056],[-13.700708,9.515906],[-13.701674,9.515173],[-13.702434,9.51458],[-13.702612,9.514411],[-13.703366,9.513855],[-13.704201,9.513243]]]},{"c":"PASTEUR","n":"Rue Louis Pasteur","a":null,"p":"Louis Pasteur","s":"propose","q":["Cité Petit Bateau"],"d":[-13.704261,9.514004],"m":20,"o":[269867015],"g":[[[-13.704261,9.514004],[-13.703366,9.513855]]]},{"c":"KHWARIZMI","n":"Rue Al-Khwârizmî","a":null,"p":"Al-Khwârizmî","s":"propose","q":["Cité Petit Bateau"],"d":[-13.698784,9.516217],"m":26,"o":[269867017],"g":[[[-13.698784,9.516217],[-13.69853,9.517294]]]},{"c":"KIDJO","n":"Rue Angélique Kidjo","a":null,"p":"Angélique Kidjo","s":"propose","q":["Cité Petit Bateau"],"d":[-13.698658,9.516022],"m":40,"o":[269867023],"g":[[[-13.699608,9.517519],[-13.699281,9.516978],[-13.699181,9.516834],[-13.699167,9.516813],[-13.698784,9.516217],[-13.698658,9.516022]]]},{"c":"PAPABOUBA","n":"Rue Papa Bouba Diop","a":null,"p":"Papa Bouba Diop","s":"propose","q":["Cité Petit Bateau"],"d":[-13.700772,9.514695],"m":58,"o":[270579425],"g":[[[-13.698229,9.514215],[-13.698604,9.514286],[-13.698643,9.514293],[-13.698861,9.514337],[-13.699146,9.514388],[-13.699742,9.514501],[-13.700772,9.514695]]]},{"c":"ANOM3","n":null,"a":null,"p":null,"s":"a_nommer","q":["Cité Petit Bateau"],"d":[-13.686675,9.524217],"m":10,"o":[291395356],"g":[[[-13.686951,9.524527],[-13.686807,9.524412],[-13.686751,9.524354],[-13.68673,9.524322],[-13.686707,9.524277],[-13.686675,9.524217]]]},{"c":"KANDIA","n":"Avenue Sory Kandia Kouyaté","a":null,"p":"Sory Kandia Kouyaté","s":"propose","q":["Cité Petit Bateau"],"d":[-13.687627,9.524902],"m":18,"o":[291395358],"g":[[[-13.686951,9.524527],[-13.687291,9.524713],[-13.687496,9.524824],[-13.687627,9.524902]]]},{"c":"DOUGLASS","n":"Rue Frederick Douglass","a":null,"p":"Frederick Douglass","s":"propose","q":["Almamiya"],"d":[-13.713187,9.510611],"m":34,"o":[291504351],"g":[[[-13.713187,9.510611],[-13.713072,9.510601],[-13.712564,9.510479],[-13.71206,9.51035],[-13.711823,9.510306],[-13.711729,9.51028]]]},{"c":"ANGELOU","n":"Rue Maya Angelou","a":null,"p":"Maya Angelou","s":"propose","q":["Cité Petit Bateau"],"d":[-13.698647,9.513987],"m":14,"o":[338615025],"g":[[[-13.698229,9.514215],[-13.698287,9.513971],[-13.698296,9.513956],[-13.698317,9.513948],[-13.698647,9.513987]]]},{"c":"BOLIVAR","n":"Rue Simón Bolívar","a":null,"p":"Simón Bolívar","s":"propose","q":["Almamiya"],"d":[-13.719173,9.507751],"m":32,"o":[364654187],"g":[[[-13.71779,9.507514],[-13.719173,9.507751]]]},{"c":"VINCI","n":"Rue Léonard de Vinci","a":null,"p":"Léonard de Vinci","s":"propose","q":["Cité Petit Bateau"],"d":[-13.694206,9.518741],"m":12,"o":[376491013],"g":[[[-13.694206,9.518741],[-13.694048,9.518756],[-13.693946,9.518746],[-13.693856,9.518701],[-13.693757,9.518589]]]},{"c":"TOLSTOI","n":"Rue Léon Tolstoï","a":null,"p":"Léon Tolstoï","s":"propose","q":["Cité Petit Bateau"],"d":[-13.693757,9.518589],"m":18,"o":[376491014],"g":[[[-13.693757,9.518589],[-13.693861,9.518797],[-13.693914,9.518909],[-13.693966,9.519019],[-13.694085,9.519247]]]},{"c":"MORRISON","n":"Rue Toni Morrison","a":null,"p":"Toni Morrison","s":"propose","q":["Cité Petit Bateau"],"d":[-13.693377,9.518125],"m":14,"o":[441776076],"g":[[[-13.693757,9.518589],[-13.693521,9.51826],[-13.693377,9.518125]]]},{"c":"CESARIA","n":"Rue Cesária Évora","a":null,"p":"Cesária Évora","s":"propose","q":["Cité Petit Bateau"],"d":[-13.690672,9.522372],"m":66,"o":[448572357],"g":[[[-13.688982,9.524785],[-13.689278,9.524319],[-13.69051,9.522725],[-13.690547,9.52266],[-13.690588,9.522588]],[[-13.690588,9.522588],[-13.690617,9.522504],[-13.690672,9.522372]]]},{"c":"ANOM4","n":null,"a":null,"p":null,"s":"a_nommer","q":["Cité Petit Bateau"],"d":[-13.704641,9.5171],"m":6,"o":[550013247],"g":[[[-13.704641,9.5171],[-13.704589,9.517041],[-13.70444,9.516972]]]},{"c":"MUKWEGE","n":"Rue Denis Mukwege","a":null,"p":"Denis Mukwege","s":"propose","q":["Cité Petit Bateau"],"d":[-13.705077,9.517325],"m":42,"o":[550013248],"g":[[[-13.703554,9.51771],[-13.703734,9.517724],[-13.703902,9.517676],[-13.704641,9.5171],[-13.704756,9.517053],[-13.704845,9.51706],[-13.705077,9.517325]]]},{"c":"SOYINKA","n":"Rue Wole Soyinka","a":null,"p":"Wole Soyinka","s":"propose","q":["Cité Petit Bateau"],"d":[-13.702171,9.518002],"m":56,"o":[550013254],"g":[[[-13.702106,9.518317],[-13.702898,9.518473],[-13.702821,9.518738],[-13.702792,9.518734]],[[-13.702792,9.518734],[-13.702051,9.518584],[-13.702106,9.518317],[-13.702171,9.518002]]]},{"c":"ANOM5","n":null,"a":null,"p":null,"s":"a_nommer","q":["Cité Petit Bateau"],"d":[-13.694206,9.518741],"m":8,"o":[551360786],"g":[[[-13.694206,9.518741],[-13.693914,9.518909]]]},{"c":"EINSTEIN","n":"Rue Albert Einstein","a":null,"p":"Albert Einstein","s":"propose","q":["Cité Petit Bateau"],"d":[-13.696286,9.517113],"m":24,"o":[636060853],"g":[[[-13.696286,9.517113],[-13.695834,9.517398]],[[-13.695435,9.517644],[-13.695834,9.517398]]]},{"c":"ANOM6","n":null,"a":null,"p":null,"s":"a_nommer","q":["Cité Petit Bateau"],"d":[-13.687627,9.524902],"m":4,"o":[690223569],"g":[[[-13.687627,9.524902],[-13.687681,9.524953],[-13.687716,9.52499]],[[-13.687875,9.525168],[-13.6879,9.525196],[-13.687946,9.525253]]]},{"c":"NIANE","n":"Avenue Djibril Tamsir Niane","a":null,"p":"Djibril Tamsir Niane","s":"propose","q":["Cité Petit Bateau"],"d":[-13.688005,9.525216],"m":12,"o":[690223571],"g":[[[-13.688005,9.525216],[-13.68793,9.52513],[-13.687862,9.525063],[-13.687815,9.52502],[-13.687765,9.524981],[-13.687734,9.524956],[-13.687698,9.524932],[-13.687627,9.524902]]]},{"c":"CURIE","n":"Rue Marie Curie","a":null,"p":"Marie Curie","s":"propose","q":["Cité Petit Bateau"],"d":[-13.704726,9.516619],"m":22,"o":[827899928],"g":[[[-13.703763,9.516431],[-13.704726,9.516619]]]},{"c":"MONENEMBO","n":"Rue Tierno Monénembo","a":null,"p":"Tierno Monénembo","s":"propose","q":["Cité Petit Bateau"],"d":[-13.694895,9.520294],"m":56,"o":[914338675],"g":[[[-13.694895,9.520294],[-13.694843,9.520345],[-13.694758,9.520373],[-13.694694,9.520472],[-13.694011,9.521855],[-13.693803,9.522117],[-13.693572,9.522324]]]},{"c":"PICASSO","n":"Rue Pablo Picasso","a":null,"p":"Pablo Picasso","s":"propose","q":["Cité Petit Bateau"],"d":[-13.698229,9.514215],"m":12,"o":[919187263],"g":[[[-13.697769,9.514069],[-13.698229,9.514215]]]},{"c":"SHAKESPEARE","n":"Rue William Shakespeare","a":null,"p":"William Shakespeare","s":"propose","q":["Cité Petit Bateau"],"d":[-13.695994,9.516665],"m":20,"o":[963538973],"g":[[[-13.695994,9.516665],[-13.696286,9.517113],[-13.696451,9.517365]]]},{"c":"NERUDA","n":"Rue Pablo Neruda","a":null,"p":"Pablo Neruda","s":"propose","q":["Manquepas"],"d":[-13.706577,9.510753],"m":16,"o":[1107646371],"g":[[[-13.706577,9.510753],[-13.706177,9.510695],[-13.705914,9.510657]]]},{"c":"NKRUMAH","n":"Rue Kwame Nkrumah","a":null,"p":"Kwame Nkrumah","s":"propose","q":["Cité Petit Bateau"],"d":[-13.706024,9.518194],"m":42,"o":[1138157900],"g":[[[-13.704311,9.518865],[-13.704705,9.518759],[-13.704974,9.518674],[-13.705193,9.518592],[-13.705447,9.518496],[-13.70564,9.518403],[-13.706024,9.518194]]]},{"c":"CABRAL","n":"Rue Amílcar Cabral","a":null,"p":"Amílcar Cabral","s":"propose","q":["Cité Petit Bateau"],"d":[-13.706571,9.517878],"m":56,"o":[1138157901],"g":[[[-13.706571,9.517878],[-13.706221,9.518014],[-13.705393,9.518338],[-13.705305,9.518374],[-13.704888,9.518544],[-13.704264,9.518785]]]},{"c":"MAKEBA","n":"Rue Miriam Makeba","a":null,"p":"Miriam Makeba","s":"propose","q":["Cité Petit Bateau"],"d":[-13.706221,9.518014],"m":48,"o":[1138157908],"g":[[[-13.706221,9.518014],[-13.705435,9.518399],[-13.705331,9.518441],[-13.704924,9.518606],[-13.704264,9.518785]]]},{"c":"OMARTALL","n":"Rue El Hadj Omar Tall","a":null,"p":"El Hadj Omar Tall","s":"propose","q":["Cité Petit Bateau"],"d":[-13.706571,9.517878],"m":56,"o":[1138157909],"g":[[[-13.704311,9.518865],[-13.704633,9.518819],[-13.705001,9.518732],[-13.705215,9.518652],[-13.705474,9.518554],[-13.705704,9.518404],[-13.706024,9.518194],[-13.706571,9.517878]]]},{"c":"ANOM7","n":null,"a":null,"p":null,"s":"a_nommer","q":["Cité Petit Bateau"],"d":[-13.697962,9.515341],"m":10,"o":[1201571645],"g":[[[-13.697962,9.515341],[-13.697561,9.515238]]]},{"c":"MALCOLMX","n":"Rue Malcolm X","a":null,"p":"Malcolm X","s":"propose","q":["Cité Petit Bateau"],"d":[-13.698229,9.514215],"m":36,"o":[1201571646],"g":[[[-13.69787,9.51573],[-13.697962,9.515341],[-13.698229,9.514215]]]},{"c":"GARVEY","n":"Rue Marcus Garvey","a":null,"p":"Marcus Garvey","s":"propose","q":["Cité Petit Bateau"],"d":[-13.698643,9.514293],"m":34,"o":[1201571647],"g":[[[-13.698643,9.514293],[-13.698515,9.515063],[-13.698524,9.515084],[-13.698546,9.515095],[-13.6987,9.515109],[-13.698717,9.515125],[-13.698723,9.515146],[-13.698618,9.515574]]]},{"c":"NSOUMER","n":"Rue Lalla Fatma N'Soumer","a":null,"p":"Lalla Fatma N'Soumer","s":"propose","q":["Manquepas","Cité Petit Bateau"],"d":[-13.703269,9.510399],"m":196,"o":[1317168767],"g":[[[-13.703269,9.510399],[-13.702887,9.510529],[-13.70234,9.510727],[-13.701444,9.511063],[-13.700736,9.511318],[-13.700513,9.511396],[-13.700213,9.511484],[-13.69986,9.511574],[-13.699521,9.51161],[-13.699077,9.511622],[-13.698601,9.511624],[-13.698055,9.511627],[-13.69763,9.511626],[-13.697371,9.511652],[-13.697069,9.511702],[-13.696924,9.511751],[-13.696784,9.511831],[-13.696698,9.511915],[-13.696649,9.512013],[-13.696652,9.512114],[-13.696696,9.512222],[-13.696806,9.512351],[-13.69703,9.51259],[-13.697514,9.513134],[-13.697666,9.513319],[-13.697749,9.513465],[-13.697789,9.513541]]]},{"c":"MOLIERE","n":"Rue Molière","a":null,"p":"Molière","s":"propose","q":["Manquepas","Cité Petit Bateau"],"d":[-13.703147,9.511014],"m":20,"o":[1382059503],"g":[[[-13.703147,9.511014],[-13.702312,9.510863]]]},{"c":"GARCIAMARQUEZ","n":"Rue Gabriel García Márquez","a":null,"p":"Gabriel García Márquez","s":"propose","q":["Almamiya","Manquepas"],"d":[-13.718316,9.504777],"m":16,"o":[1384107317],"g":[[[-13.718316,9.504777],[-13.718061,9.504697],[-13.717903,9.504704],[-13.717693,9.504744]]]},{"c":"RUMI","n":"Rue Rûmî","a":null,"p":"Rûmî","s":"propose","q":["Almamiya","Manquepas"],"d":[-13.71836,9.50454],"m":14,"o":[1384107318],"g":[[[-13.718254,9.505112],[-13.718316,9.504777],[-13.71836,9.50454]]]},{"c":"ANOM8","n":null,"a":null,"p":null,"s":"a_nommer","q":["Manquepas"],"d":[-13.713637,9.504856],"m":10,"o":[1462517077],"g":[[[-13.713637,9.504856],[-13.713542,9.505283]]]},{"c":"LUMUMBA","n":"Rue Patrice Lumumba","a":null,"p":"Patrice Lumumba","s":"propose","q":["Almamiya"],"d":[-13.715312,9.514039],"m":14,"o":[1463606917],"g":[[[-13.715312,9.514039],[-13.715332,9.514062],[-13.715359,9.514077],[-13.71539,9.514083],[-13.71542,9.51408]],[[-13.71542,9.51408],[-13.715449,9.514068],[-13.715471,9.514047],[-13.715487,9.514021],[-13.715493,9.513991],[-13.71549,9.51396],[-13.715477,9.513933],[-13.715456,9.51391],[-13.715429,9.513895],[-13.715399,9.513889],[-13.715368,9.513892],[-13.71534,9.513905],[-13.715317,9.513925],[-13.715302,9.513951],[-13.715296,9.513981],[-13.715299,9.514012],[-13.715312,9.514039]]]},{"c":"KARAMOKOALFA","n":"Avenue Karamoko Alfa","a":null,"p":"Karamoko Alfa","s":"propose","q":["Manquepas"],"d":[-13.710496,9.508759],"m":14,"o":[1517534782],"g":[[[-13.710448,9.508936],[-13.710491,9.50891],[-13.710529,9.508863],[-13.710545,9.508824],[-13.710539,9.508803],[-13.710522,9.508777],[-13.710496,9.508759]],[[-13.710496,9.508759],[-13.710466,9.508751],[-13.710435,9.508755],[-13.710407,9.508769],[-13.710372,9.508799],[-13.710343,9.508847],[-13.710342,9.508874],[-13.710354,9.508907],[-13.710368,9.508924],[-13.710387,9.50894],[-13.710425,9.508944],[-13.710448,9.508936]]]}]}</script>
+<script>
+(function(){
+"use strict";
+
+/* =====================================================================
+   1. PLAN D'ADRESSAGE DE KALOUM (dépôt liousax/kaloum-carte)
+   Mêmes règles que la carte « Rues de Kaloum » : on suit le tracé de la rue
+   depuis son point de départ figé ; chaque tranche de 10 m reçoit un numéro
+   impair à gauche et pair à droite, dans le sens des numéros croissants.
+   ===================================================================== */
+var PLAN = JSON.parse(document.getElementById("plan").textContent);
+var COMMUNE = { nom:"Kaloum", cp:"88000", centre:[9.5092,-13.7122] };
+var QUARTIERS = PLAN.quartiers.map(function(q){ return { nom:q[0], cp:q[1], lat:q[2], lon:q[3] }; });
+
+var R=6371000, STEP=10, mLat=111320, mLon=111320*Math.cos(9.51*Math.PI/180);
+function rad(d){ return d*Math.PI/180; }
+function dist(a,b){ var dLa=rad(b.lat-a.lat), dLo=rad(b.lon-a.lon); var h=Math.pow(Math.sin(dLa/2),2)+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.pow(Math.sin(dLo/2),2); return 2*R*Math.asin(Math.sqrt(h)); }
+function NK(p){ return p.lat.toFixed(6)+","+p.lon.toFixed(6); }
+
+function chainOf(s){
+  var a=Infinity,b=-Infinity,c=Infinity,d=-Infinity;
+  s.segs.forEach(function(g){ g.forEach(function(p){ a=Math.min(a,p.lon);b=Math.max(b,p.lon);c=Math.min(c,p.lat);d=Math.max(d,p.lat); }); });
+  var horiz=(b-a)*mLon>=(d-c)*mLat;
+  var adj=new Map(); function put(k,e){ if(!adj.has(k)) adj.set(k,[]); adj.get(k).push(e); }
+  s.segs.forEach(function(g,i){ put(NK(g[0]),{i:i,rev:false,p:g[0]}); put(NK(g[g.length-1]),{i:i,rev:true,p:g[g.length-1]}); });
+  var cands=Array.from(adj.values()).filter(function(l){ return l.length===1; }); if(!cands.length) cands=Array.from(adj.values());
+  var fixed=s.fixed;
+  function score(l){ return fixed? Math.hypot((l[0].p.lat-fixed[0])*mLat,(l[0].p.lon-fixed[1])*mLon) : (horiz? l[0].p.lon : l[0].p.lat); }
+  cands.sort(function(x,y){ return score(x)-score(y); });
+  var used=new Set(), chain=[], cur=NK(cands[0][0].p), pdx=0, pdy=0, jumps=new Set();
+  function walk(){ for(;;){
+    var opts=(adj.get(cur)||[]).filter(function(e){ return !used.has(e.i); }); if(!opts.length) break;
+    var best=opts[0];
+    if(opts.length>1&&(pdx||pdy)){ var bs=-Infinity; opts.forEach(function(o){ var g=s.segs[o.i],A=o.rev?g[g.length-1]:g[0],B=o.rev?g[g.length-2]:g[1]; var dx=(B.lon-A.lon)*mLon,dy=(B.lat-A.lat)*mLat,n=Math.hypot(dx,dy)||1; var sc=(dx*pdx+dy*pdy)/n; if(sc>bs){bs=sc;best=o;} }); }
+    used.add(best.i);
+    var g=best.rev? s.segs[best.i].slice().reverse() : s.segs[best.i];
+    Array.prototype.push.apply(chain, chain.length? g.slice(1) : g);
+    var P=chain[chain.length-2],Q=chain[chain.length-1]; pdx=(Q.lon-P.lon)*mLon; pdy=(Q.lat-P.lat)*mLat; var n=Math.hypot(pdx,pdy)||1; pdx/=n; pdy/=n;
+    cur=NK(Q);
+  }}
+  walk();
+  if(chain.length<2){ chain.length=0; Array.prototype.push.apply(chain,s.segs[0]); used.add(0); }
+  function dPoly(pl,p){ var bb=Infinity; for(var i=1;i<pl.length;i++){ var ax=pl[i-1].lon*mLon,ay=pl[i-1].lat*mLat,vx=pl[i].lon*mLon-ax,vy=pl[i].lat*mLat-ay,L2=vx*vx+vy*vy||1,px=p.lon*mLon,py=p.lat*mLat,t=Math.max(0,Math.min(1,((px-ax)*vx+(py-ay)*vy)/L2)); bb=Math.min(bb,Math.hypot(px-ax-t*vx,py-ay-t*vy)); } return bb; }
+  var parallel=new Set(s.segs.map(function(g,i){return i;}).filter(function(i){ var g=s.segs[i]; return !used.has(i) && dPoly(chain,g[Math.floor(g.length/2)])<=40; }));
+  for(;;){
+    var rest=s.segs.map(function(g,i){return i;}).filter(function(i){ return !used.has(i)&&!parallel.has(i); }); if(!rest.length) break;
+    var E=chain[chain.length-1], bi=-1, brev=false, bd=Infinity;
+    rest.forEach(function(i){ var g=s.segs[i],d0=dist(E,g[0]),d1=dist(E,g[g.length-1]); if(d0<bd){bd=d0;bi=i;brev=false;} if(d1<bd){bd=d1;bi=i;brev=true;} });
+    used.add(bi);
+    var g2=brev? s.segs[bi].slice().reverse() : s.segs[bi];
+    jumps.add(chain.length); Array.prototype.push.apply(chain,g2);
+    var P2=chain[chain.length-2],Q2=chain[chain.length-1]; pdx=(Q2.lon-P2.lon)*mLon; pdy=(Q2.lat-P2.lat)*mLat; var n2=Math.hypot(pdx,pdy)||1; pdx/=n2; pdy/=n2;
+    cur=NK(Q2); walk();
+  }
+  s.jumps=jumps; s.chain=chain; s.cum=[0];
+  for(var i=1;i<chain.length;i++) s.cum.push(s.cum[i-1]+dist(chain[i-1],chain[i]));
+  s.total=s.cum[s.cum.length-1];
+  s.maxNo=2*Math.floor(s.total/STEP)+2;
+}
+function refOn(s,lat,lon){
+  var px=lon*mLon,py=lat*mLat,best=null;
+  for(var i=1;i<s.chain.length;i++){
+    if(s.jumps.has(i)) continue;
+    var A=s.chain[i-1],B=s.chain[i],ax=A.lon*mLon,ay=A.lat*mLat,vx=B.lon*mLon-ax,vy=B.lat*mLat-ay,L2=vx*vx+vy*vy; if(!L2) continue;
+    var t=Math.max(0,Math.min(1,((px-ax)*vx+(py-ay)*vy)/L2)),qx=ax+t*vx,qy=ay+t*vy,dd=Math.hypot(px-qx,py-qy);
+    if(!best||dd<best.dist) best={dist:dd,d:s.cum[i-1]+t*Math.sqrt(L2),left:vx*(py-ay)-vy*(px-ax)>0,q:{lon:qx/mLon,lat:qy/mLat}};
+  }
+  return best;
+}
+function houseNo(dd,left){ return 2*Math.floor(Math.max(0,dd)/STEP)+(left?1:2); }
+
+var STREETS = PLAN.rues.map(function(r){
+  var s = { code:r.c, nom:r.n || ("Rue à nommer "+r.c), personnalite:r.p, ancien:r.a, statut:r.s, quartiers:r.q, osm:r.o&&r.o[0],
+    segs:r.g.map(function(l){ return l.map(function(p){ return {lon:p[0],lat:p[1]}; }); }), fixed:r.d?[r.d[1],r.d[0]]:null, maxRef:r.m };
+  chainOf(s);
+  s.verifier = s.maxNo!==r.m;   /* numérotation à confirmer sur la carte */
+  return s;
+});
+var STREET_BY_CODE = {}; STREETS.forEach(function(s){ STREET_BY_CODE[s.code]=s; });
+
+function addressAt(lat,lon){
+  var px=lon*mLon,py=lat*mLat,best=null;
+  STREETS.forEach(function(s){ s.segs.forEach(function(g){ for(var i=1;i<g.length;i++){
+    var ax=g[i-1].lon*mLon,ay=g[i-1].lat*mLat,vx=g[i].lon*mLon-ax,vy=g[i].lat*mLat-ay,L2=vx*vx+vy*vy; if(!L2) continue;
+    var t=Math.max(0,Math.min(1,((px-ax)*vx+(py-ay)*vy)/L2)),dd=Math.hypot(px-ax-t*vx,py-ay-t*vy);
+    if(!best||dd<best.dist) best={s:s,dist:dd};
+  }}); });
+  if(!best||best.dist>60) return null;
+  var r=refOn(best.s,lat,lon);
+  return { s:best.s, dist:best.dist, left:r.left, q:r.q, no:houseNo(r.d,r.left) };
+}
+function quartierAt(lat,lon){
+  var b=null,bd=Infinity;
+  QUARTIERS.forEach(function(q){ var d=Math.hypot((lat-q.lat)*mLat,(lon-q.lon)*mLon); if(d<bd){bd=d;b=q;} });
+  return b;
+}
+/* Quadrillage de 400 m, comme le plan de Paris de la carte */
+var CELL=400, GRID=(function(){
+  var a=Infinity,b=-Infinity,c=Infinity,d=-Infinity;
+  STREETS.forEach(function(s){ s.segs.forEach(function(g){ g.forEach(function(p){ a=Math.min(a,p.lon);b=Math.max(b,p.lon);c=Math.min(c,p.lat);d=Math.max(d,p.lat); }); }); });
+  return { west:a-50/mLon, north:d+50/mLat, east:b, south:c, cols:Math.ceil(((b-a)*mLon+100)/CELL), rows:Math.ceil(((d-c)*mLat+100)/CELL) };
+})();
+function colName(i){ return i<26? String.fromCharCode(65+i) : String.fromCharCode(64+Math.floor(i/26))+String.fromCharCode(65+i%26); }
+function cellAt(lat,lon){
+  var ci=Math.max(0,Math.min(GRID.cols-1,Math.floor((lon-GRID.west)*mLon/CELL)));
+  var ri=Math.max(0,Math.min(GRID.rows-1,Math.floor((GRID.north-lat)*mLat/CELL)));
+  return colName(ci)+(ri+1);
+}
+
+/* =====================================================================
+   2. STOCKAGE LOCAL
+   ===================================================================== */
+var KEY="agent-npi-adressage-v1";
+var db={ agent:{mat:"",nom:""}, voies:[], adresses:{}, liens:[] };
+function load(){
+  try{ var raw=localStorage.getItem(KEY); if(raw){ var d=JSON.parse(raw); if(d&&d.liens){ db=d; db.voies=(db.voies||[]).filter(function(v){ return v.ajoutee; }); } } }catch(e){}
+}
+function save(){
+  try{ localStorage.setItem(KEY,JSON.stringify(db)); return true; }
+  catch(e){ toast("Mémoire du téléphone pleine : envoyez puis effacez les données."); return false; }
+}
+load();
+
+/* =====================================================================
+   3. UTILITAIRES
+   ===================================================================== */
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function today(){ var d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function frDate(iso){ return iso? iso.split("-").reverse().join("/") : ""; }
+function normNpi(v){ return String(v||"").toUpperCase().replace(/[^A-Z0-9]/g,""); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+var toastTimer;
+function toast(msg){ var t=$("toast"); t.textContent=msg; t.hidden=false; clearTimeout(toastTimer); toastTimer=setTimeout(function(){ t.hidden=true; },3000); }
+function allVoies(){ return STREETS.map(function(s){ return {code:s.code,nom:s.nom,plan:true}; }).concat(db.voies); }
+function voieByCode(c){ if(STREET_BY_CODE[c]) return {code:c,nom:STREET_BY_CODE[c].nom,plan:true}; for(var i=0;i<db.voies.length;i++){ if(db.voies[i].code===c) return db.voies[i]; } return null; }
+function quartierByCp(cp){ for(var i=0;i<QUARTIERS.length;i++){ if(QUARTIERS[i].cp===cp) return QUARTIERS[i]; } return null; }
+function numTxt(n,comp){ return n+(comp?" "+comp.toLowerCase():""); }
+function adresseTexte(a){ var v=voieByCode(a.code_voie); return numTxt(a.numero,a.complement)+", "+(v?v.nom:"voie "+a.code_voie); }
+function activeDomicile(npi){ for(var i=0;i<db.liens.length;i++){ var l=db.liens[i]; if(l.npi===npi&&l.type==="domicile"&&!l.date_fin&&l.statut!=="annule") return l; } return null; }
+function lastLien(npi){ var r=null; db.liens.forEach(function(l){ if(l.npi===npi&&l.statut!=="annule") r=l; }); return r; }
+function personsAt(id){ return db.liens.filter(function(l){ return l.id_adresse===id&&!l.date_fin&&l.statut!=="annule"; }); }
+function pending(){ return db.liens.filter(function(l){ return !l.envoye&&l.statut!=="annule"; }).length; }
+var ARROW='<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>';
+var CHECK='<svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>';
+
+/* =====================================================================
+   4. ÉCRANS ET BANDEAU
+   ===================================================================== */
+var view="flow";   /* flow | reg | exp */
+var step=1;        /* 1 identifier · 2 localiser · 3 valider · 4 enregistré */
+var f={ lien:"domicile", lat:null, lng:null, precision:null, photo:null, plan:null, manual:false };
+
+function netUpdate(){
+  var n=pending();
+  $("netText").textContent=(navigator.onLine?"En ligne":"Hors ligne")+(n?" · "+n+" en attente":"");
+  $("offNotice").hidden=navigator.onLine;
+}
+window.addEventListener("online",netUpdate); window.addEventListener("offline",netUpdate);
+function agentUpdate(){
+  $("agentLabel").textContent=db.agent.mat? "Agent "+db.agent.mat+(db.agent.nom?" · "+db.agent.nom:"") : "Agent non renseigné";
+  $("agMat").value=db.agent.mat||""; $("agNom").value=db.agent.nom||"";
+}
+function gpsHeadText(){
+  if(f.lat===null) return "GPS…";
+  return f.precision!=null? "GPS ± "+f.precision+" m" : "Position manuelle";
+}
+function render(){
+  var flow=view==="flow";
+  ["step1","step2","step3","step4"].forEach(function(id,i){ $(id).hidden=!(flow&&step===i+1); });
+  $("viewReg").hidden=view!=="reg"; $("viewExp").hidden=view!=="exp";
+  /* bandeau */
+  var first=flow&&(step===1||step===4);
+  $("hBack").hidden=first;
+  $("hLeft").className="hleft"+(first?"":" center");
+  $("agentLabel").hidden=!first;
+  $("eyebrow").textContent= view==="reg"? "Registre · Kaloum" : view==="exp"? "Envoi · Kaloum" : "Prototype · Kaloum";
+  $("hReg").hidden=!first; $("netPill").hidden=!first;
+  $("gpsHead").hidden=!(flow&&step===2); $("gpsHead").textContent=gpsHeadText();
+  $("steps").hidden=!flow;
+  ["st1","st2","st3"].forEach(function(id,i){ $(id).className=(step>i)?"done":""; });
+  /* bas d'écran */
+  $("dock").hidden=!flow;
+  $("dock").className="dock pad"+(flow&&step===2?" white":"");
+  document.querySelector("main").style.background=(flow&&step===2)?"var(--surface)":"";
+  validate();
+}
+function setView(v){ view=v; if(v==="reg") renderRegistre(); if(v==="exp") renderExport(); render(); window.scrollTo(0,0); if(v==="flow"&&step===2) refreshMap(); }
+$("hReg").addEventListener("click",function(){ setView("reg"); });
+$("netPill").addEventListener("click",function(){ setView("exp"); });
+$("hBack").addEventListener("click",function(){
+  if(view!=="flow"){ setView("flow"); return; }
+  if(step>1&&step<4) goStep(step-1);
+});
+
+function validate(){
+  var ok=false,label="",alt=false;
+  if(step===1){ ok=normNpi($("npi").value).length===18&&$("prenom").value.trim()&&$("nom").value.trim(); label="Suivant : localiser le logement"+ARROW; }
+  else if(step===2){ ok=!!currentAddr()&&f.lat!==null; label=f.lat===null? "Relevez la position GPS" : "Confirmer cette adresse"+ARROW; }
+  else if(step===3){ ok=$("consent").checked; label="Valider le lien NPI ↔ adresse"; }
+  else { ok=true; alt=true; label="Personne suivante du ménage"; }
+  var b=$("nextBtn"); b.disabled=!ok; b.innerHTML=label;
+  $("altBtn").hidden=!alt;
+}
+function goStep(s){
+  step=s; render(); window.scrollTo(0,0);
+  if(s===2){ initMap(); addrUpdate(); if(f.lat===null) gps(); }
+  if(s===3) renderRecap();
+}
+
+/* =====================================================================
+   5. ÉTAPE 1 : IDENTIFIER
+   ===================================================================== */
+function personUpdate(){
+  var n=normNpi($("npi").value);
+  $("npiHint").textContent=n.length+" / 18 caractères";
+  $("npiHint").className=n.length>18?"err":"hint";
+  var known=n.length===18? lastLien(n) : null;
+  var card=$("personCard");
+  if(known){
+    if(!$("prenom").value) $("prenom").value=known.prenom||"";
+    if(!$("nom").value) $("nom").value=known.nom||"";
+    if(!$("naissance").value&&known.naissance) $("naissance").value=known.naissance;
+  }
+  var pr=$("prenom").value.trim(), nm=$("nom").value.trim().toUpperCase(), dn=$("naissance").value;
+  if(known){
+    card.className="person"; $("pFields").hidden=true;
+    $("pName").textContent=pr+" "+nm;
+    var dom=activeDomicile(n);
+    $("pSub").textContent=(dn?"Né(e) le "+frDate(dn)+" · ":"")+(dom? "domicile : "+adresseTexte(db.adresses[dom.id_adresse]) : "aucun domicile actif");
+    $("pStat").innerHTML=CHECK+"Trouvé(e) dans le registre de l'appareil";
+  } else {
+    card.className="person todo"; $("pFields").hidden=false;
+    $("pName").textContent=(pr||nm)? (pr+" "+nm).trim() : "Identité à compléter";
+    $("pSub").textContent=n.length===18? "Nouvelle personne : complétez l'identité" : "Saisissez le NPI, puis le nom";
+    $("pStat").textContent="";
+  }
+  validate();
+}
+$("npi").addEventListener("input",personUpdate);
+$("npiTest").addEventListener("click",function(){
+  var n="TST"; for(var i=0;i<15;i++) n+=Math.floor(Math.random()*10);
+  $("npi").value=n; personUpdate(); $("prenom").focus();
+  toast("NPI de test créé : il commence par TST");
+});
+["prenom","nom","naissance"].forEach(function(id){ $(id).addEventListener("input",personUpdate); });
+$("pName").addEventListener("click",function(){ if($("pFields").hidden){ $("pFields").hidden=false; } });
+
+/* Scan : photo du document, lecture du code QR ou code-barres */
+var jsqrLoading=null;
+function loadJsQR(){
+  if(window.jsQR) return Promise.resolve();
+  if(jsqrLoading) return jsqrLoading;
+  jsqrLoading=new Promise(function(res,rej){ var s=document.createElement("script"); s.src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"; s.onload=res; s.onerror=function(){ jsqrLoading=null; rej(); }; document.head.appendChild(s); });
+  return jsqrLoading;
+}
+function decodeImage(img){
+  if("BarcodeDetector" in window){
+    try{ var det=new window.BarcodeDetector();
+      return det.detect(img).then(function(r){ return r.length? r[0].rawValue : decodeJs(img); }).catch(function(){ return decodeJs(img); });
+    }catch(e){}
+  }
+  return decodeJs(img);
+}
+function decodeJs(img){
+  return loadJsQR().then(function(){
+    var s=Math.min(1,1200/Math.max(img.width,img.height)), c=document.createElement("canvas");
+    c.width=Math.round(img.width*s); c.height=Math.round(img.height*s);
+    var ctx=c.getContext("2d"); ctx.drawImage(img,0,0,c.width,c.height);
+    var d=ctx.getImageData(0,0,c.width,c.height), r=window.jsQR(d.data,c.width,c.height);
+    return r? r.data : null;
+  });
+}
+$("scanFile").addEventListener("change",function(e){
+  var file=e.target.files&&e.target.files[0]; if(!file) return;
+  $("scanLabel").textContent="Lecture du code…";
+  var url=URL.createObjectURL(file), img=new Image();
+  img.onload=function(){
+    decodeImage(img).then(function(txt){
+      URL.revokeObjectURL(url);
+      var m=txt? normNpi(txt).match(/[A-Z0-9]{18}/) : null;
+      if(m){ $("npi").value=m[0]; personUpdate(); toast("NPI lu sur le document"); }
+      else toast(txt? "Code lu, mais aucun NPI de 18 caractères dedans : saisissez-le à la main." : "Aucun code lisible sur la photo : saisissez le NPI à la main.");
+    }).catch(function(){ toast("Lecture impossible sans connexion sur ce téléphone : saisissez le NPI à la main."); })
+    .then(function(){ $("scanLabel").textContent="Scanner la carte ou l'acte de naissance"; e.target.value=""; });
+  };
+  img.src=url;
+});
+
+/* =====================================================================
+   6. ÉTAPE 2 : LOCALISER
+   ===================================================================== */
+function fillSelects(keep){
+  var q=$("quartier"), v=$("voie"), qv=keep?q.value:"", vv=keep?v.value:"";
+  q.innerHTML=QUARTIERS.map(function(x){ return '<option value="'+x.cp+'">'+esc(x.nom)+" · "+x.cp+"</option>"; }).join("");
+  var list=allVoies().sort(function(a,b){ return a.nom.localeCompare(b.nom,"fr"); });
+  v.innerHTML='<option value="">Choisir une voie…</option>'+list.map(function(x){ return '<option value="'+x.code+'">'+esc(x.nom)+(x.plan?"":" (ajoutée)")+"</option>"; }).join("")+'<option value="__new">+ Voie absente du plan…</option>';
+  if(qv) q.value=qv; if(vv&&vv!=="__new") v.value=vv;
+}
+function currentAddr(){
+  var code=$("voie").value, num=parseInt($("numero").value,10), comp=$("complement").value;
+  if(!code||code==="__new"||!(num>0)) return null;
+  return { id:"GN-"+$("quartier").value+"-"+code+"-"+num+comp, code_voie:code, numero:num, complement:comp, cp_quartier:$("quartier").value };
+}
+function addrUpdate(){
+  var a=currentAddr(), v=voieByCode($("voie").value), qz=quartierByCp($("quartier").value), p=f.plan;
+  $("addrCity").textContent=qz? qz.cp+" "+qz.nom+" · Kaloum, Conakry" : "Kaloum, Conakry";
+  if(!a){
+    $("addrState").textContent=f.lat===null? "Recherche de la position…" : (p? "Adresse" : "Aucune rue du plan à moins de 60 m");
+    $("addrLine").textContent=v? v.nom+" · numéro à saisir" : (f.lat===null? "Placez-vous devant la porte" : "Choisissez la voie dans « Autre adresse »");
+    $("addrId").textContent="GN-"+$("quartier").value+"-"+(v?v.code:"·····")+"-··";
+  } else {
+    $("addrLine").textContent=numTxt(a.numero,a.complement)+", "+v.nom;
+    $("addrId").textContent=a.id;
+    var same=p&&a.code_voie===p.code&&a.numero===p.no&&!a.complement;
+    if(db.adresses[a.id]){ var n=personsAt(a.id).length; $("addrState").textContent="Adresse existante trouvée · "+n+" personne"+(n>1?"s":""); }
+    else $("addrState").textContent=same? "Adresse proposée par le plan" : "Adresse saisie à la main";
+  }
+  var line=$("planLine");
+  if(!p||!a){ line.textContent=""; line.className="planline"; }
+  else if(a.code_voie===p.code&&a.numero===p.no){
+    line.className="planline";
+    line.textContent="Côté "+(p.left?"gauche (impair)":"droit (pair)")+" · à "+Math.round(p.dist)+" m de la rue · carreau "+p.cell+(STREET_BY_CODE[p.code].verifier?" · numéro à confirmer sur la carte":"");
+  } else {
+    line.className="planline warn";
+    line.textContent="Le plan propose le "+p.no+", "+STREET_BY_CODE[p.code].nom+". Gardez votre saisie seulement si la plaque l'indique.";
+  }
+  $("gpsHead").textContent=gpsHeadText();
+  validate();
+}
+
+/* Carte : en ligne, image satellite avec les rues du plan ; hors ligne, plan des rues dessiné */
+var map=null, marker=null, accCircle=null;
+function initMap(){
+  if(typeof L==="undefined"||!navigator.onLine&&!map){ $("map").hidden=true; $("mini").hidden=false; $("mapTag").hidden=false; drawMini(); return; }
+  if(map){ refreshMap(); return; }
+  map=L.map("map",{zoomControl:false,attributionControl:true}).setView(COMMUNE.centre,16);
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"© Esri, Maxar · Rues © OpenStreetMap"}).addTo(map);
+  STREETS.forEach(function(s){
+    L.polyline(s.segs.map(function(g){ return g.map(function(p){ return [p.lat,p.lon]; }); }),
+      {color:s.statut==="a_nommer"?"#F2A33A":"#FFD34E",weight:4,opacity:.9,dashArray:s.statut==="a_nommer"?"6 6":null}).bindTooltip(s.nom,{sticky:true}).addTo(map);
+  });
+  map.on("click",function(e){ setPos(e.latlng.lat,e.latlng.lng,null,"manuel"); });
+  if(f.lat!==null) drawPos();
+  refreshMap();
+}
+function refreshMap(){ if(map) setTimeout(function(){ map.invalidateSize(); },60); else if(!$("mini").hidden) drawMini(); }
+function drawPos(){
+  if(!map){ drawMini(); return; }
+  var ll=[f.lat,f.lng];
+  if(!marker) marker=L.marker(ll,{icon:L.divIcon({className:"",html:'<svg width="38" height="48" viewBox="0 0 38 48" aria-hidden="true"><path d="M19 47C19 47 3 29 3 18a16 16 0 0 1 32 0c0 11-16 29-16 29Z" fill="#C8402A" stroke="#FFFFFF" stroke-width="2.5"/><circle cx="19" cy="18" r="6" fill="#FFFFFF"/></svg>',iconSize:[38,48],iconAnchor:[19,47]})}).addTo(map);
+  else marker.setLatLng(ll);
+  if(accCircle){ map.removeLayer(accCircle); accCircle=null; }
+  if(f.precision!=null) accCircle=L.circle(ll,{radius:f.precision,color:"#C8402A",weight:1,fillOpacity:.08,interactive:false}).addTo(map);
+  map.setView(ll,Math.max(map.getZoom(),18));
+}
+var miniView=null;
+function drawMini(){
+  var cv=$("mini"); if(cv.hidden) return;
+  var dpr=window.devicePixelRatio||1, W=cv.clientWidth||390, H=cv.clientHeight||300;
+  cv.width=W*dpr; cv.height=H*dpr;
+  var ctx=cv.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.fillStyle="#EDE9DF"; ctx.fillRect(0,0,W,H);
+  var cLat,cLon,span;
+  if(f.lat!==null){ cLat=f.lat; cLon=f.lng; span=260; }
+  else { cLat=(GRID.north+GRID.south)/2; cLon=(GRID.west+GRID.east)/2; span=Math.max((GRID.east-GRID.west)*mLon,(GRID.north-GRID.south)*mLat*W/H)+100; }
+  var k=W/span; miniView={cLat:cLat,cLon:cLon,k:k,W:W,H:H};
+  function X(lon){ return W/2+(lon-cLon)*mLon*k; } function Y(lat){ return H/2-(lat-cLat)*mLat*k; }
+  ctx.lineCap="round"; ctx.lineJoin="round"; ctx.strokeStyle="#FFFFFF"; ctx.lineWidth=f.lat!==null?14:4;
+  STREETS.forEach(function(s){ s.segs.forEach(function(g){ ctx.beginPath(); g.forEach(function(p,i){ if(i) ctx.lineTo(X(p.lon),Y(p.lat)); else ctx.moveTo(X(p.lon),Y(p.lat)); }); ctx.stroke(); }); });
+  if(f.lat!==null){
+    ctx.font="600 11px 'IBM Plex Sans', system-ui, sans-serif"; var seen={};
+    STREETS.forEach(function(s){ var m=s.chain[Math.floor(s.chain.length/2)], x=X(m.lon), y=Y(m.lat);
+      if(x>8&&x<W-8&&y>14&&y<H-14&&!seen[s.code]){ seen[s.code]=1; var t=s.nom.length>24?s.nom.slice(0,23)+"…":s.nom, w=ctx.measureText(t).width+12, x0=Math.max(4,Math.min(x-w/2,W-w-4));
+        ctx.fillStyle="rgba(255,255,255,.88)"; ctx.fillRect(x0,y-9,w,17); ctx.fillStyle="#3E4A42"; ctx.fillText(t,x0+6,y+4); } });
+    var px=X(f.lng), py=Y(f.lat);
+    ctx.beginPath(); ctx.moveTo(px,py); ctx.bezierCurveTo(px-6,py-10,px-16,py-20,px-16,py-29); ctx.arc(px,py-29,16,Math.PI,0); ctx.bezierCurveTo(px+16,py-20,px+6,py-10,px,py);
+    ctx.fillStyle="#C8402A"; ctx.fill(); ctx.lineWidth=2.5; ctx.strokeStyle="#FFFFFF"; ctx.stroke();
+    ctx.beginPath(); ctx.arc(px,py-29,6,0,Math.PI*2); ctx.fillStyle="#FFFFFF"; ctx.fill();
+  }
+}
+$("mini").addEventListener("click",function(e){
+  if(!miniView) return; var r=this.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top, v=miniView;
+  setPos(v.cLat-(y-v.H/2)/(mLat*v.k), v.cLon+(x-v.W/2)/(mLon*v.k), null, "manuel");
+});
+window.addEventListener("resize",function(){ if(step===2) drawMini(); });
+
+function setPos(lat,lng,acc,source){
+  f.lat=+lat.toFixed(6); f.lng=+lng.toFixed(6); f.precision=acc!=null?Math.round(acc):null; f.source=source;
+  var a=addressAt(f.lat,f.lng);
+  if(a){
+    var q=quartierAt(a.q.lat,a.q.lon);
+    f.plan={ code:a.s.code, no:a.no, left:a.left, dist:a.dist, cp:q?q.cp:null, cell:cellAt(a.q.lat,a.q.lon) };
+    $("voie").value=a.s.code; $("numero").value=a.no; $("complement").value=""; if(q) $("quartier").value=q.cp;
+    $("newVoie").hidden=true;
+  } else { f.plan=null; showManual(true); }
+  drawPos(); addrUpdate();
+}
+function gps(){
+  if(!navigator.geolocation){ toast("GPS non disponible : touchez la carte devant la porte."); return; }
+  $("gpsHead").textContent="GPS…";
+  navigator.geolocation.getCurrentPosition(function(p){
+    setPos(p.coords.latitude,p.coords.longitude,p.coords.accuracy,"gps");
+    if(p.coords.accuracy>25) toast("Précision faible : restez à découvert et relevez à nouveau.");
+  },function(err){
+    $("addrState").textContent=err.code===1? "Accès au GPS refusé" : "Signal GPS introuvable";
+    $("addrLine").textContent=err.code===1? "Autorisez la localisation, ou touchez la carte" : "Réessayez à découvert, ou touchez la carte";
+    $("gpsHead").textContent="GPS indisponible";
+  },{enableHighAccuracy:true,timeout:20000,maximumAge:0});
+}
+$("gpsBtn").addEventListener("click",gps);
+
+function showManual(on){ f.manual=on; $("manual").hidden=!on; $("manualBtn").setAttribute("aria-expanded",on?"true":"false"); }
+$("manualBtn").addEventListener("click",function(){ showManual(!f.manual); });
+
+$("photo").addEventListener("change",function(e){
+  var file=e.target.files&&e.target.files[0]; if(!file) return;
+  var rd=new FileReader();
+  rd.onload=function(){ var img=new Image(); img.onload=function(){
+    var s=Math.min(1,640/Math.max(img.width,img.height)), c=document.createElement("canvas");
+    c.width=Math.round(img.width*s); c.height=Math.round(img.height*s); c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+    f.photo=c.toDataURL("image/jpeg",0.6); $("photoPrev").src=f.photo; $("photoPrev").hidden=false;
+    $("photoLabel").textContent="Photo ajoutée"; $("photoBtn").classList.add("on");
+  }; img.src=rd.result; };
+  rd.readAsDataURL(file);
+});
+
+/* Code d'une voie ajoutée : comme ceux du plan, tiré du nom (ex. « Rue Diallo Telli » → DIALLOTELLI) */
+function codeFromName(nom){
+  var base=String(nom||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/^(RUE|AVENUE|BOULEVARD|PLACE|IMPASSE|CORNICHE)\s+/,"").replace(/[^A-Z0-9]/g,"").slice(0,14)||"VOIE";
+  var c=base, i=2; while(voieByCode(c)){ c=base.slice(0,12)+i; i++; } return c;
+}
+$("voie").addEventListener("change",function(){
+  if(this.value==="__new"){ $("newVoie").hidden=false; $("nvCode").textContent="Le code est tiré du nom, comme dans le plan. La voie sera ajoutée au plan après validation par la mairie."; $("nvNom").focus(); }
+  else $("newVoie").hidden=true;
+  addrUpdate();
+});
+$("nvCancel").addEventListener("click",function(){ $("newVoie").hidden=true; $("voie").value=""; addrUpdate(); });
+$("nvAdd").addEventListener("click",function(){
+  var nom=$("nvNom").value.trim(); if(!nom){ toast("Indiquez le nom de la voie."); return; }
+  var full=$("nvType").value.charAt(0).toUpperCase()+$("nvType").value.slice(1)+" "+nom;
+  if(allVoies().some(function(v){ return v.nom.toLowerCase()===full.toLowerCase(); })){ toast("Cette voie existe déjà dans le plan."); return; }
+  var v={code:codeFromName(full),nom:full,type:$("nvType").value,ajoutee:true,agent:db.agent.mat||null};
+  db.voies.push(v); save(); fillSelects(true); $("voie").value=v.code; $("newVoie").hidden=true; $("nvNom").value="";
+  toast("Voie ajoutée : "+full); addrUpdate();
+});
+$("numero").addEventListener("input",addrUpdate);
+$("complement").addEventListener("change",addrUpdate);
+$("quartier").addEventListener("change",addrUpdate);
+document.querySelectorAll("#lienSeg button").forEach(function(b){
+  b.addEventListener("click",function(){ f.lien=b.getAttribute("data-v"); document.querySelectorAll("#lienSeg button").forEach(function(x){ x.setAttribute("aria-pressed",x===b?"true":"false"); }); });
+});
+
+/* =====================================================================
+   7. ÉTAPE 3 : VALIDER
+   ===================================================================== */
+function renderRecap(){
+  var n=normNpi($("npi").value), a=currentAddr(), v=voieByCode(a.code_voie), qz=quartierByCp(a.cp_quartier);
+  var gpsTxt=f.precision!=null? "± "+f.precision+" m"+(f.precision<=25?" · conforme":" · faible") : "Placée sur la carte";
+  $("recap").innerHTML=
+    '<div><span class="k">Personne</span><span class="v">'+esc($("prenom").value.trim()+" "+$("nom").value.trim().toUpperCase())+" · "+esc($("role").value)+'</span><span class="mono">NPI '+esc(n)+"</span></div>"+
+    '<div><span class="k">Adresse · '+esc(f.lien)+'</span><span class="v">'+esc(numTxt(a.numero,a.complement)+", "+v.nom)+'</span><span class="sub">'+esc(qz.cp+" "+qz.nom+" · Kaloum")+'</span><span class="mono brand">'+esc(a.id)+"</span></div>"+
+    '<div class="grid2"><div><span class="k2">Position GPS</span><span class="v2">'+esc(gpsTxt)+'</span></div><div><span class="k2">Photo façade</span><span class="v2">'+(f.photo?"Ajoutée":"Aucune")+"</span></div></div>"+($("remarque").value.trim()? '<div><span class="k">Remarque terrain</span><span class="sub">'+esc($("remarque").value.trim())+"</span></div>" : "");
+  var old=f.lien==="domicile"? activeDomicile(n) : null, box=$("demNotice");
+  if(old&&old.id_adresse===a.id){ box.hidden=false; box.className="notice info"; box.textContent="Déjà rattaché(e) à cette adresse : ses informations seront mises à jour, sans doublon."; }
+  else if(old){ box.hidden=false; box.className="notice"; box.innerHTML="<span>Déménagement : le domicile au <b>"+esc(adresseTexte(db.adresses[old.id_adresse]))+"</b> sera clos le "+frDate(today())+".</span>"; }
+  else box.hidden=true;
+  $("consent").checked=false; netUpdate(); validate();
+}
+$("consent").addEventListener("change",validate);
+
+function enregistrer(){
+  var n=normNpi($("npi").value), a=currentAddr();
+  if(!db.adresses[a.id]){
+    db.adresses[a.id]={ id:a.id, code_voie:a.code_voie, numero:a.numero, complement:a.complement||null, cp_quartier:a.cp_quartier,
+      lat:f.lat, lng:f.lng, precision:f.precision, photo:f.photo, carreau:f.plan?f.plan.cell:null,
+      conforme_plan:!!(f.plan&&f.plan.code===a.code_voie&&f.plan.no===a.numero), remarque:$("remarque").value.trim()||null, plan_propose:f.plan?(f.plan.no+", "+STREET_BY_CODE[f.plan.code].nom):null, creee_le:new Date().toISOString(), agent:db.agent.mat||null };
+  } else { if(f.photo&&!db.adresses[a.id].photo) db.adresses[a.id].photo=f.photo; var rq=$("remarque").value.trim(); if(rq) db.adresses[a.id].remarque=(db.adresses[a.id].remarque? db.adresses[a.id].remarque+" | " : "")+rq; }
+  var prev=f.lien==="domicile"? activeDomicile(n) : null;
+  if(prev&&prev.id_adresse===a.id){ prev.prenom=$("prenom").value.trim(); prev.nom=$("nom").value.trim().toUpperCase(); prev.role=$("role").value; prev.envoye=false; }
+  else {
+    if(prev){ prev.date_fin=today(); prev.envoye=false; }
+    db.liens.push({ id:uid(), npi:n, prenom:$("prenom").value.trim(), nom:$("nom").value.trim().toUpperCase(), naissance:$("naissance").value||null,
+      role:$("role").value, id_adresse:a.id, type:f.lien, date_debut:today(), date_fin:null, source:"ravec", agent:db.agent.mat||null,
+      lat:f.lat, lng:f.lng, precision:f.precision, statut:"valide", envoye:false, cree_le:new Date().toISOString() });
+  }
+  if(!save()) return false;
+  var count=personsAt(a.id).length;
+  $("okText").textContent=$("prenom").value.trim()+" "+$("nom").value.trim().toUpperCase()+" est rattaché(e) au "+adresseTexte(db.adresses[a.id])+" comme "+f.lien+". Ménage : "+count+" personne"+(count>1?"s":"")+" enregistrée"+(count>1?"s":"")+".";
+  netUpdate(); return true;
+}
+function resetPerson(){ ["npi","prenom","nom","naissance"].forEach(function(id){ $(id).value=""; }); $("role").selectedIndex=0; personUpdate(); }
+function resetLogement(){
+  resetPerson();
+  $("voie").value=""; $("numero").value=""; $("complement").value=""; $("remarque").value=""; showManual(false); $("newVoie").hidden=true;
+  f.lat=f.lng=f.precision=null; f.photo=null; f.plan=null; f.lien="domicile";
+  document.querySelectorAll("#lienSeg button").forEach(function(x){ x.setAttribute("aria-pressed",x.getAttribute("data-v")==="domicile"?"true":"false"); });
+  $("photoPrev").hidden=true; $("photoLabel").textContent="Photo façade"; $("photoBtn").classList.remove("on"); $("photo").value="";
+  if(map){ if(marker){map.removeLayer(marker);marker=null;} if(accCircle){map.removeLayer(accCircle);accCircle=null;} map.setView(COMMUNE.centre,16); }
+  addrUpdate(); drawMini();
+}
+$("nextBtn").addEventListener("click",function(){
+  if(step===1) goStep(2);
+  else if(step===2) goStep(3);
+  else if(step===3){ if(enregistrer()){ goStep(4); toast("Lien enregistré sur l'appareil"); } }
+  else { resetPerson(); goStep(1); $("npi").focus(); }
+});
+$("altBtn").addEventListener("click",function(){ resetLogement(); goStep(1); });
+
+/* =====================================================================
+   8. REGISTRE
+   ===================================================================== */
+var pendingCancel=null;
+function renderRegistre(){
+  var actifs=db.liens.filter(function(l){ return !l.date_fin&&l.statut!=="annule"; });
+  $("sAdr").textContent=Object.keys(db.adresses).length;
+  $("sPers").textContent=new Set(actifs.map(function(l){ return l.npi; })).size;
+  $("sWait").textContent=pending();
+  var q=$("q").value.trim().toLowerCase(), groups={};
+  db.liens.forEach(function(l){
+    if(l.statut==="annule") return; var a=db.adresses[l.id_adresse]; if(!a) return;
+    if(q&&(l.npi+" "+l.prenom+" "+l.nom+" "+adresseTexte(a)+" "+a.id).toLowerCase().indexOf(q)<0) return;
+    (groups[a.id]=groups[a.id]||[]).push(l);
+  });
+  var ids=Object.keys(groups).sort();
+  if(!ids.length){ $("regList").innerHTML='<div class="card empty">'+(db.liens.length?"Aucun résultat pour cette recherche.":"Aucun lien pour l'instant.<br>Les personnes rattachées à une adresse apparaîtront ici, regroupées par logement.")+"</div>"; return; }
+  $("regList").innerHTML=ids.map(function(id){
+    var a=db.adresses[id], qz=quartierByCp(a.cp_quartier);
+    var people=groups[id].sort(function(x,y){ return (x.date_fin?1:0)-(y.date_fin?1:0); }).map(function(l){
+      var conf=pendingCancel===l.id;
+      return '<div class="persrow"><div style="min-width:0;display:flex;flex-direction:column;gap:1px"><span class="v2">'+esc(l.prenom+" "+l.nom)+'</span><span class="mono">'+esc(l.npi)+'</span>'+
+        '<span class="hint">'+esc(l.role)+" · "+esc(l.type)+" · depuis le "+esc(frDate(l.date_debut))+(l.date_fin?" · clos le "+esc(frDate(l.date_fin)):"")+"</span>"+
+        (conf? '<span style="display:flex;gap:14px"><button class="linkbtn" data-cancel-yes="'+l.id+'">Confirmer l\'annulation</button><button class="linkbtn" style="color:var(--muted)" data-cancel-no="1">Garder</button></span>'
+             : (!l.date_fin? '<span><button class="linkbtn" data-cancel="'+l.id+'">Annuler ce lien</button></span>' : ""))+
+        '</div><div class="pills">'+(l.date_fin?'<span class="pill">Clos</span>':'<span class="pill ok">Actif</span>')+(l.envoye?"":'<span class="pill wait">À envoyer</span>')+"</div></div>";
+    }).join("");
+    return '<article class="card"><div style="display:flex;flex-direction:column;gap:4px"><span class="v">'+esc(adresseTexte(a))+'</span><span class="sub">'+esc((qz?qz.cp+" "+qz.nom:a.cp_quartier)+(a.carreau?" · carreau "+a.carreau:""))+'</span>'+
+      '<span style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="chip">'+esc(a.id)+"</span>"+(a.conforme_plan===false?'<span class="pill wait">Diffère du plan</span>':"")+"</span>"+(a.remarque?'<span class="hint">Remarque : '+esc(a.remarque)+"</span>":"")+"</div>"+people+"</article>";
+  }).join("");
+}
+$("q").addEventListener("input",renderRegistre);
+$("regList").addEventListener("click",function(e){
+  var t=e.target;
+  if(t.hasAttribute("data-cancel")){ pendingCancel=t.getAttribute("data-cancel"); renderRegistre(); }
+  else if(t.hasAttribute("data-cancel-no")){ pendingCancel=null; renderRegistre(); }
+  else if(t.hasAttribute("data-cancel-yes")){ var id=t.getAttribute("data-cancel-yes"); db.liens.forEach(function(l){ if(l.id===id){ l.statut="annule"; l.envoye=false; } }); pendingCancel=null; save(); netUpdate(); renderRegistre(); toast("Lien annulé"); }
+});
+
+/* =====================================================================
+   9. ENVOI
+   ===================================================================== */
+function download(name,content,type){
+  var url=URL.createObjectURL(new Blob([content],{type:type})), a=document.createElement("a");
+  a.href=url; a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },1000);
+}
+function stamp(){ return today()+"_"+(db.agent.mat||"agent").replace(/[^A-Za-z0-9-]/g,""); }
+function sq(s){ return s==null||s===""? "NULL" : "'"+String(s).replace(/'/g,"''")+"'"; }
+function splitType(full){ var i=full.indexOf(" "); return i<0? ["rue",full] : [full.slice(0,i).toLowerCase(), full.slice(i+1)]; }
+function buildSql(){
+  var L=[];
+  L.push("-- Export agent recenseur · "+(db.agent.mat||"agent inconnu")+" · "+new Date().toISOString());
+  L.push("-- Plan d'adressage de Kaloum figé le "+PLAN.fige_le+". À exécuter après schema_npi_adressage.sql.");
+  L.push("BEGIN;");
+  db.voies.forEach(function(v){ var t=splitType(v.nom);
+    L.push("INSERT INTO voie (id_commune, code_voie, type_voie, nom, statut) SELECT id_commune, "+sq(v.code)+", "+sq(t[0])+", "+sq(t[1])+", 'a_valider' FROM commune WHERE code_postal = '88000' ON CONFLICT (id_commune, code_voie) DO NOTHING;"); });
+  if(db.agent.mat) L.push("INSERT INTO agent (matricule, nom, organisme, id_commune) SELECT "+sq(db.agent.mat)+", "+sq(db.agent.nom||db.agent.mat)+", 'RAVEC', id_commune FROM commune WHERE code_postal = '88000' ON CONFLICT (matricule) DO NOTHING;");
+  Object.keys(db.adresses).forEach(function(id){ var a=db.adresses[id];
+    L.push("INSERT INTO adresse (id_adresse, id_voie, id_quartier, numero, complement, type_batiment, position, statut) SELECT "+sq(a.id)+", v.id_voie, q.id_quartier, "+a.numero+", "+sq(a.complement)+", 'maison', ST_SetSRID(ST_MakePoint("+a.lng+", "+a.lat+"), 4326), "+(a.conforme_plan===false?"'provisoire'":"'validee'")+" FROM voie v, quartier q WHERE v.code_voie = "+sq(a.code_voie)+" AND q.code_postal = "+sq(a.cp_quartier)+" ON CONFLICT (id_adresse) DO NOTHING;"); });
+  var seen={};
+  db.liens.forEach(function(l){ if(seen[l.npi]) return; seen[l.npi]=1; L.push("INSERT INTO personne_ref (npi, nom_affichage) VALUES ("+sq(l.npi)+", "+sq(l.prenom+" "+l.nom)+") ON CONFLICT (npi) DO NOTHING;"); });
+  db.liens.filter(function(l){ return l.statut!=="annule"; }).sort(function(x,y){ return (x.date_fin?0:1)-(y.date_fin?0:1); }).forEach(function(l){
+    L.push("INSERT INTO lien_npi_adresse (npi, id_adresse, type_lien, role_menage, date_debut, date_fin, source, id_agent, position_saisie, statut) VALUES ("+
+      sq(l.npi)+", "+sq(l.id_adresse)+", "+sq(l.type)+", "+sq(l.role)+", "+sq(l.date_debut)+", "+sq(l.date_fin)+", "+sq(l.source)+", "+
+      (l.agent? "(SELECT id_agent FROM agent WHERE matricule = "+sq(l.agent)+")" : "NULL")+", ST_SetSRID(ST_MakePoint("+l.lng+", "+l.lat+"), 4326), 'valide');"); });
+  L.push("COMMIT;");
+  return L.join("\n")+"\n";
+}
+function buildCsv(){
+  var head=["npi","prenom","nom","date_naissance","role_menage","type_lien","id_adresse","adresse","code_postal","quartier","carreau","conforme_plan","plan_propose","remarque_terrain","latitude","longitude","precision_m","date_debut","date_fin","statut","agent","envoye"];
+  var rows=db.liens.map(function(l){ var a=db.adresses[l.id_adresse]||{}, qz=quartierByCp(a.cp_quartier);
+    return [l.npi,l.prenom,l.nom,l.naissance,l.role,l.type,l.id_adresse,a.id?adresseTexte(a):"",a.cp_quartier,qz?qz.nom:"",a.carreau,a.conforme_plan===false?"non":"oui",a.plan_propose,a.remarque,l.lat,l.lng,l.precision,l.date_debut,l.date_fin,l.statut,l.agent,l.envoye?"oui":"non"]
+      .map(function(x){ x=x==null?"":String(x); return /[";\n]/.test(x)? '"'+x.replace(/"/g,'""')+'"' : x; }).join(";"); });
+  return "﻿"+head.join(";")+"\n"+rows.join("\n")+"\n";
+}
+function renderExport(){
+  var w=pending(), na=Object.keys(db.adresses).length;
+  $("exportSummary").textContent=db.liens.length
+    ? w+" lien"+(w>1?"s":"")+" en attente sur "+db.liens.length+" au total, "+na+" adresse"+(na>1?"s":"")+". Envoyez le fichier SQL à la base centrale dès que le réseau le permet, puis marquez les liens comme envoyés."
+    : "Aucun lien à envoyer pour l'instant. Les fichiers seront prêts dès le premier lien enregistré.";
+  $("planInfo").textContent="Plan de Kaloum figé le "+frDate(PLAN.fige_le)+" : "+STREETS.length+" voies, "+QUARTIERS.length+" quartiers ("+QUARTIERS.map(function(q){ return q.nom+" "+q.cp; }).join(", ")+")"+(db.voies.length? ", plus "+db.voies.length+" voie"+(db.voies.length>1?"s":"")+" ajoutée"+(db.voies.length>1?"s":"")+" sur le terrain." : ".");
+}
+function shareFiles(){
+  var files=[
+    new File([buildCsv()],"test_kaloum_"+stamp()+".csv",{type:"text/csv"}),
+    new File([JSON.stringify(db)],"sauvegarde_"+stamp()+".json",{type:"application/json"})
+  ];
+  var data={files:files,title:"Test adressage Kaloum",text:"Résultats du test d'adressage de Kaloum ("+db.liens.length+" liens, "+Object.keys(db.adresses).length+" adresses)."};
+  if(navigator.canShare&&navigator.canShare(data)){
+    navigator.share(data).then(function(){ toast("Résultats envoyés"); }).catch(function(e){ if(e&&e.name!=="AbortError") toast("Envoi impossible : téléchargez les fichiers ci-dessous."); });
+  } else {
+    download(files[0].name,buildCsv(),"text/csv;charset=utf-8");
+    toast("Partage non disponible ici : fichier CSV téléchargé, envoyez-le par WhatsApp.");
+  }
+}
+$("exShare").addEventListener("click",function(){ if(!db.liens.length){ toast("Aucun lien enregistré pour l'instant."); return; } shareFiles(); });
+$("exSql").addEventListener("click",function(){ download("liens_npi_"+stamp()+".sql",buildSql(),"application/sql"); toast("Fichier SQL téléchargé"); });
+$("exCsv").addEventListener("click",function(){ download("liens_npi_"+stamp()+".csv",buildCsv(),"text/csv;charset=utf-8"); toast("Fichier CSV téléchargé"); });
+$("exJson").addEventListener("click",function(){ download("sauvegarde_npi_"+stamp()+".json",JSON.stringify(db),"application/json"); toast("Sauvegarde téléchargée"); });
+$("markSent").addEventListener("click",function(){ var n=0; db.liens.forEach(function(l){ if(!l.envoye){ l.envoye=true; n++; } }); save(); netUpdate(); renderExport(); toast(n? n+" lien"+(n>1?"s":"")+" marqué"+(n>1?"s":"")+" comme envoyé"+(n>1?"s":"") : "Rien en attente"); });
+$("importFile").addEventListener("change",function(e){
+  var file=e.target.files&&e.target.files[0]; if(!file) return; var rd=new FileReader();
+  rd.onload=function(){
+    try{ var d=JSON.parse(rd.result); if(!d||!Array.isArray(d.liens)) throw 0;
+      var ids={}; db.liens.forEach(function(l){ ids[l.id]=1; });
+      var added=0; d.liens.forEach(function(l){ if(!ids[l.id]){ db.liens.push(l); added++; } });
+      Object.keys(d.adresses||{}).forEach(function(k){ if(!db.adresses[k]) db.adresses[k]=d.adresses[k]; });
+      (d.voies||[]).forEach(function(v){ if(v.ajoutee&&!voieByCode(v.code)) db.voies.push(v); });
+      save(); fillSelects(true); netUpdate(); renderExport(); toast(added+" lien"+(added>1?"s":"")+" fusionné"+(added>1?"s":""));
+    }catch(err){ toast("Ce fichier n'est pas une sauvegarde de l'appli."); }
+    e.target.value="";
+  };
+  rd.readAsText(file);
+});
+$("agSave").addEventListener("click",function(){ db.agent.mat=$("agMat").value.trim().toUpperCase(); db.agent.nom=$("agNom").value.trim(); save(); agentUpdate(); toast("Agent enregistré"); });
+$("wipe").addEventListener("click",function(){ $("wipeConfirm").hidden=false; });
+$("wipeNo").addEventListener("click",function(){ $("wipeConfirm").hidden=true; });
+$("wipeYes").addEventListener("click",function(){ db={ agent:db.agent, voies:[], adresses:{}, liens:[] }; save(); fillSelects(false); netUpdate(); renderExport(); $("wipeConfirm").hidden=true; toast("Données effacées"); });
+
+/* =====================================================================
+   10. DÉMARRAGE
+   ===================================================================== */
+if("serviceWorker" in navigator && (location.protocol==="https:"||location.hostname==="localhost")){ navigator.serviceWorker.register("sw.js").catch(function(){}); }
+if(navigator.storage&&navigator.storage.persist){ try{ navigator.storage.persist(); }catch(e){} }
+fillSelects(false); agentUpdate(); netUpdate(); personUpdate(); addrUpdate(); render();
+if(!db.agent.mat) setTimeout(function(){ toast("Renseignez votre matricule : touchez le badge réseau en haut à droite."); },400);
+window.__npiApp={ buildSql:buildSql, addressAt:addressAt, streets:STREETS };
+})();
+</script>
+</body>
+</html>
