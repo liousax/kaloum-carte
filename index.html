@@ -458,6 +458,7 @@ const NARROW=()=>window.matchMedia('(max-width:820px)').matches;
 (()=>{const b=document.getElementById('toolsBtn'),t=document.getElementById('tools');
   b.addEventListener('click',()=>{const o=!t.classList.contains('open');t.classList.toggle('open',o);b.setAttribute('aria-expanded',o?'true':'false')})})();
 const map=L.map('map',{zoomControl:true,zoomSnap:0.5}).setView([9.512,-13.712],15);
+map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
 for(const[n,z]of[['bati',360],['casing',380],['voies',400],['noms',430]]){map.createPane(n);map.getPane(n).style.zIndex=z}
 map.getPane('noms').style.pointerEvents='none';
 const rBati=L.canvas({pane:'bati'}),rCasing=L.svg({pane:'casing'}),rVoies=L.svg({pane:'voies'}),rNoms=L.svg({pane:'noms',padding:0.6});
