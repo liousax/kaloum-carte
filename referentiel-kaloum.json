@@ -5,40 +5,40 @@
  "frozenAt": "2026-10-17T06:10:08.453Z",
  "over": {
   "n:Boulevard de la Nation": {
-   "pid": "samory"
+   "keep": true
   },
   "n:Avenue du Port": {
-   "pid": "alfayaya"
+   "keep": true
   },
   "n:Rue KA. 062": {
    "pid": "olympio"
   },
   "n:Avenue du 25 Août 1958": {
-   "pid": "achebe"
+   "keep": true
   },
   "n:5e Avenue": {
    "pid": "sankara"
   },
   "n:Avenue M'Balia Camara": {
-   "pid": "waligoumba"
+   "keep": true
   },
   "n:3e Avenue": {
    "pid": "cheikhanta"
   },
   "n:Avenue de la République": {
-   "pid": "bokarbiro"
+   "keep": true
   },
   "n:Boulevard Ahmed Sekou Touré": {
-   "pid": "sorymawdo"
+   "keep": true
   },
   "n:1er Avenue": {
    "pid": "mamadykeita"
   },
   "n:Boulevard Diallo Telly": {
-   "pid": "keletigui"
+   "keep": true
   },
   "n:Avenue Colonel Binta Pillote Diallo": {
-   "pid": "siradiou"
+   "keep": true
   },
   "n:1er Boulevard": {
    "pid": "modibo"
@@ -47,22 +47,22 @@
    "pid": "farka"
   },
   "n:Avenue Hadja Aissatou Mofory Bangoura": {
-   "pid": "abdelkader"
+   "keep": true
   },
   "n:2e Avenue": {
    "pid": "alinesitoe"
   },
   "n:Avenue William Tubman": {
-   "pid": "mandela"
+   "keep": true
   },
   "n:9e Avenue": {
    "pid": "nzinga"
   },
   "n:Rond-Point du Port": {
-   "pid": "dinahsalifou"
+   "keep": true
   },
   "n:Avenue de la Gare": {
-   "pid": "nyerere"
+   "keep": true
   },
   "n:Rue KA. 040": {
    "pid": "senghor"
@@ -71,10 +71,10 @@
    "pid": "rosaparks"
   },
   "n:Avenue Louis Lansana Beavogui": {
-   "pid": "ahmedbaba"
+   "keep": true
   },
   "n:Avenue du 5 Septembre 2021": {
-   "pid": "ibnbattuta"
+   "keep": true
   },
   "n:11e Avenue": {
    "pid": "mombeya"
@@ -110,37 +110,37 @@
    "pid": "sirleaf"
   },
   "n:Boulevard Général Lansana Conté": {
-   "pid": "camaralaye"
+   "keep": true
   },
   "n:10e Boulevard": {
    "pid": "yacine"
   },
   "n:Boulevard Maritime": {
-   "pid": "soundiata"
+   "keep": true
   },
   "n:Corniche Sud": {
-   "pid": "fodeba"
+   "keep": true
   },
   "n:Autoroute Fidel Castro": {
-   "pid": "mbalia"
+   "keep": true
   },
   "n:Rond-Point Samory Touré": {
-   "pid": "diallotelli"
+   "keep": true
   },
   "n:le Niger": {
-   "pid": "wandel"
+   "keep": true
   },
   "n:4e Avenue": {
    "pid": "hampate"
   },
   "n:Pont du 8 Novembre": {
-   "pid": "jeannemartin"
+   "keep": true
   },
   "n:Rue KA. 045": {
    "pid": "etoo"
   },
   "n:Avenue Hadja Saran Daraba": {
-   "pid": "saifoulaye"
+   "keep": true
   },
   "n:Rue KA. 034": {
    "pid": "drogba"
@@ -152,37 +152,37 @@
    "pid": "mansamoussa"
   },
   "n:Avenue Docteur Rober Accar Nadjib": {
-   "pid": "annan"
+   "keep": true
   },
   "n:7e Avenue": {
    "pid": "gurnah"
   },
   "n:Boulevard de Boulbinet": {
-   "pid": "demba"
+   "keep": true
   },
   "n:Avenue du 3 Avril 1984": {
-   "pid": "asantewaa"
+   "keep": true
   },
   "n:Rue KA. 042": {
    "pid": "avicenne"
   },
   "n:Avenue Hadja Rabiatou Serah Diallo": {
-   "pid": "tutu"
+   "keep": true
   },
   "n:Rond-Point de Nimba": {
-   "pid": "mafory"
+   "keep": true
   },
   "n:Avenue du 1er Mars 1960": {
-   "pid": "funmilayo"
+   "keep": true
   },
   "n:Pénétrante du Port Autonome de Conakry": {
-   "pid": "sassine"
+   "keep": true
   },
   "n:AVENUE Dinah Salifou": {
-   "pid": "mariamaba"
+   "keep": true
   },
   "n:Avenue Général Noumandjan Kéita": {
-   "pid": "fantamady"
+   "keep": true
   },
   "u:38664159": {
    "pid": "biko"
@@ -821,5 +821,5 @@
  },
  "dir": {},
  "extra": [],
- "renameAll": true
+ "renameAll": false
 }

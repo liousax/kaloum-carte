@@ -1,5 +1,5 @@
 /* Agent recenseur NPI · Kaloum : garde l'appli et la carte pour travailler sans réseau. */
-const VERSION = "recenseur-v4";
+const VERSION = "recenseur-v5";
 const SHELL = [
   "./", "./index.html", "./config.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png",
   "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js",
