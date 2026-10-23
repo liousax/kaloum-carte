@@ -201,6 +201,8 @@ li.letter{font:800 18px var(--display);color:var(--plan-quartier);padding:10px 8
   .rendu.fold label{display:none}
   .guide{top:calc(env(safe-area-inset-top,0px) + 10px);width:calc(100% - 20px)}
   body.guiding header{display:none}
+  body.guiding .leaflet-top.leaflet-right{display:none}
+  .chipmap{margin-right:76px!important;max-width:calc(100vw - 100px)}
   .pickhint{top:calc(env(safe-area-inset-top,0px) + 72px);width:calc(100% - 20px);justify-content:space-between}
   .status{z-index:1100}
   /* boutons ronds flottants (position, itinéraire) */
@@ -967,7 +969,7 @@ function computeRoute(){
       let acc=0;for(const st of RT.res.steps){st.d0=acc;acc+=st.len}
       L.polyline(line,{renderer:rTrajet,color:css('--plan-halo'),weight:11,opacity:.9,lineJoin:'round',interactive:false}).addTo(rtLayer);
       L.polyline(line,{renderer:rTrajet,color:css('--street-keep'),weight:6.5,opacity:1,lineJoin:'round',dashArray:RT.mode==='walk'?'2 9':null,lineCap:'round',interactive:false}).addTo(rtLayer);
-      map.fitBounds(L.latLngBounds(line),{padding:[60,60],maxZoom:17});
+      map.fitBounds(L.latLngBounds(line),Object.assign({maxZoom:17},fitPad(40)));
     }
     L.circleMarker(RT.from,{renderer:rTrajet,radius:8,color:css('--plan-halo'),weight:3,fillColor:css('--street'),fillOpacity:1,interactive:false}).addTo(rtLayer);
   }else RT.res=null;
@@ -978,7 +980,7 @@ function renderRoute(){
   const box=$('route');
   if(!RT.to){box.hidden=true;document.body.classList.remove('has-route');if(window.SHEET_READY){SHEET.title('Rues de Kaloum','Touche une rue ou une adresse sur la carte');SHEET.set('peek')}return}
   box.hidden=false;document.body.classList.add('has-route');
-  if(window.SHEET_READY){SHEET.title('Itinéraire',RT.toTxt);if(SHEET.state==='peek')SHEET.set('half');$('sheet').scrollTop=0}
+  if(window.SHEET_READY){SHEET.title('Itinéraire',RT.toTxt);if(SHEET.state==='peek'&&!picking)SHEET.set('half');$('sheet').scrollTop=0}
   const r=RT.res;
   box.innerHTML=`<div class="eyebrow">Itinéraire</div><h2>${esc(RT.toTxt)}</h2>
     <div class="rpts"><i class="from"></i><span>${RT.from?`<b>${esc(RT.fromTxt)}</b>`:'<b>Départ ?</b>'} · <a id="rMe">ma position</a> · <a id="rPick">choisir sur la carte</a></span>
@@ -987,30 +989,48 @@ function renderRoute(){
     ${RT.mode==='car'?`<label class="toggle" style="margin:4px 0"><input type="checkbox" id="rPlan"${RT.plan?' checked':''}> Avec le plan de circulation proposé (sens alternés)</label>`:''}
     ${!RT.from?'<p class="empty">Choisis un point de départ : ta position, ou un point sur la carte.</p>':!r?'<p class="empty">Aucun chemin trouvé : le départ ou l\'arrivée est trop loin d\'une rue, ou les sens uniques bloquent le passage.</p>':`
     <div class="rsum"><b>${fmtT(r.time)}</b><span>${fmtD(r.len)} · ${RT.mode==='walk'?'à pied, 5 km/h':'en voiture, sans bouchons'}</span></div>${r.loose?'<p class="empty" style="margin:0 0 6px">Trajet approximatif : certains sens uniques ont été ignorés pour trouver un chemin.</p>':''}
-    <div class="row"><button class="btn primary" type="button" id="rGo">${online()?'Démarrer le guidage':'Voir le trajet en démonstration'}</button>${online()?'<button class="btn" type="button" id="rDemo">Démonstration</button>':''}<button class="btn" type="button" id="rClear">Effacer</button></div>
+    <div class="row"><button class="btn primary" type="button" id="rGo">${RT.mode==='walk'?'🚶 Démarrer à pied':'🚗 Démarrer en voiture'}</button><button class="btn" type="button" id="rDemo">Simulation du trajet</button><button class="btn" type="button" id="rClear">Effacer</button></div>
     <details class="rdet"${NARROW()?'':' open'}><summary>Étapes du trajet (${r.steps.length+1})</summary><ol class="rsteps" id="rSteps">${r.steps.map((st,i)=>`<li data-i="${i}"><span class="ic">${ICON[st.turn]}</span><span>${esc(stepText(st))}</span><span class="d">${fmtD(st.len)}</span></li>`).join('')}<li><span class="ic">${ICON.end}</span><span>Arrivée : ${esc(RT.toTxt)}</span><span class="d"></span></li></ol></details>`}
     ${!r?'<div class="row"><button class="btn" type="button" id="rClear">Effacer</button></div>':''}`;
   box.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{RT.mode=b.dataset.m;computeRoute()});
   const pl=$('rPlan');if(pl)pl.onchange=e=>{RT.plan=e.target.checked;computeRoute()};
   const me=$('rMe');if(me)me.onclick=locateStart;
-  $('rPick').onclick=()=>{picking=true;$('pickTxt').textContent='Clique sur la carte pour choisir le point de départ';$('pickHint').hidden=false};
+  $('rPick').onclick=()=>startPick();
   const c=$('rClear');if(c)c.onclick=clearRoute;
-  const g=$('rGo');if(g)g.onclick=()=>online()?startGPS():startDemo();
+  const g=$('rGo');if(g)g.onclick=()=>startGPS();
   const d=$('rDemo');if(d)d.onclick=startDemo;
 }
 $('pickCancel').onclick=()=>{picking=false;$('pickHint').hidden=true};
+/* Est-on à Kaloum ? (emprise des rues + 1,5 km) */
+function inKaloum(ll){
+  if(!streets.length)return true;
+  let a=Infinity,b=-Infinity,c=Infinity,d=-Infinity;
+  for(const s of streets)for(const g of s.segs)for(const p of g){a=Math.min(a,p.lon);b=Math.max(b,p.lon);c=Math.min(c,p.lat);d=Math.max(d,p.lat)}
+  const m=1500;return ll.lng>=a-m/mLon&&ll.lng<=b+m/mLon&&ll.lat>=c-m/mLat&&ll.lat<=d+m/mLat;
+}
+const kmFrom=ll=>Math.round(dist({lat:ll.lat,lon:ll.lng},{lat:9.512,lon:-13.712})/1000);
+/* Sur téléphone, cadrer la carte dans la partie visible (au-dessus de la fiche du bas) */
+function fitPad(p){
+  if(!window.matchMedia('(max-width:820px)').matches)return{padding:[p,p]};
+  const sv=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sv'))||140;
+  return{paddingTopLeft:[p,80],paddingBottomRight:[p,sv+24]};
+}
+/* Choisir un point sur la carte : on baisse la fiche pour libérer la carte */
+function startPick(txt){picking=true;$('pickTxt').textContent=txt||'Touche la carte pour choisir le point de départ';$('pickHint').hidden=false;if(window.SHEET_READY)SHEET.set('peek')}
 function routeTo(latlng,txt){RT.to=latlng;RT.toTxt=txt;if(!RT.from&&online())locateStart();computeRoute()}
 function setStart(latlng,txt){RT.from=latlng;RT.fromTxt=txt;if(!RT.to){RT.toTxt='Choisis une destination';chipText('Départ choisi. Cherche ou clique une adresse, puis « Y aller ».');RT.to=null}computeRoute()}
 function clearRoute(){stopGuide();RT.from=RT.to=RT.res=null;rtLayer.clearLayers();renderRoute()}
 function locateStart(){
-  if(!online()||!navigator.geolocation){chipText('« Ma position » marche une fois la carte en ligne. Choisis le départ sur la carte.');picking=true;$('pickHint').hidden=false;return}
+  if(!online()||!navigator.geolocation){chipText('« Ma position » marche une fois la carte en ligne. Choisis le départ sur la carte.');startPick();return}
   chipText('Recherche de ta position…');
-  navigator.geolocation.getCurrentPosition(p=>{chipText('');const ll=L.latLng(p.coords.latitude,p.coords.longitude);const a=addressAt(ll);RT.from=ll;RT.fromTxt=a?'Ma position · '+addrText(a):'Ma position';computeRoute()},
-    ()=>{chipText('Position introuvable. Choisis le départ sur la carte.');picking=true;$('pickHint').hidden=false},{enableHighAccuracy:true,timeout:15000});
+  navigator.geolocation.getCurrentPosition(p=>{chipText('');const ll=L.latLng(p.coords.latitude,p.coords.longitude);
+    if(!inKaloum(ll)){RT.from=null;chipText('Tu n\'es pas à Kaloum (à environ '+kmFrom(ll).toLocaleString('fr-FR')+' km) : touche la carte pour choisir le point de départ.');startPick();computeRoute();return}
+    const a=addressAt(ll);RT.from=ll;RT.fromTxt=a?'Ma position · '+addrText(a):'Ma position';computeRoute()},
+    ()=>{chipText('Position introuvable. Choisis le départ sur la carte.');startPick()},{enableHighAccuracy:true,timeout:15000});
 }
 
 /* ---------- guidage pas à pas (GPS ou démonstration) ---------- */
-let guideTimer=null,watchId=null,guideMarker=null;
+let guideTimer=null,watchId=null,guideMarker=null,guideSim=false;
 function routeAt(d){
   const r=RT.res,c=r.cum;let i=1;while(i<c.length-1&&c[i]<d)i++;
   const A=r.line[i-1],B=r.line[i],t=Math.max(0,Math.min(1,(d-c[i-1])/((c[i]-c[i-1])||1)));
@@ -1027,27 +1047,35 @@ function guideUpdate(d,ll){
   if(left<12){$('gTurn').textContent=ICON.end;$('gMain').textContent='Vous êtes arrivé';$('gSub').textContent=RT.toTxt;stopGuide(true);return}
   let k=0;while(k+1<r.steps.length&&r.steps[k+1].d0<=d)k++;
   const nx=r.steps[k+1];
-  if(nx){$('gTurn').textContent=ICON[nx.turn];$('gMain').textContent='Dans '+fmtD(nx.d0-d)+' : '+stepText(nx).replace(/^./,c=>c.toLowerCase());$('gSub').textContent='Encore '+fmtD(left)+' · actuellement sur '+nm(r.steps[k].s)}
-  else{$('gTurn').textContent=ICON.end;$('gMain').textContent='Arrivée dans '+fmtD(left);$('gSub').textContent=RT.toTxt}
+  const md=(RT.mode==='walk'?'🚶 À pied':'🚗 En voiture')+(guideSim?' · simulation':'')+' · ';
+  if(nx){$('gTurn').textContent=ICON[nx.turn];$('gMain').textContent='Dans '+fmtD(nx.d0-d)+' : '+stepText(nx).replace(/^./,c=>c.toLowerCase());$('gSub').textContent=md+'encore '+fmtD(left)+' · sur '+nm(r.steps[k].s)}
+  else{$('gTurn').textContent=ICON.end;$('gMain').textContent='Arrivée dans '+fmtD(left);$('gSub').textContent=md+RT.toTxt}
   document.querySelectorAll('#rSteps li').forEach(li=>li.classList.toggle('cur',+li.dataset.i===k));
 }
 function startDemo(){
   stopGuide();const r=RT.res;if(!r)return;$('guide').hidden=false;document.body.classList.add('guiding');if(window.SHEET_READY)SHEET.set('peek');
-  let d=0;const speed=RT.mode==='walk'?30:60;let last=performance.now();
-  map.setView(r.line[0],17);
+  guideSim=true;let d=0;const speed=RT.mode==='walk'?12:40;let last=performance.now();
+  map.setView(r.line[0],17);guideUpdate(0,routeAt(0));
   const f=now=>{const dt=Math.min(.1,(now-last)/1000);last=now;d+=speed*dt;const ll=routeAt(Math.min(d,r.len));guideUpdate(d,ll);
     if(guideTimer!==null){follow(ll);if(d<r.len)guideTimer=requestAnimationFrame(f)}};
   guideTimer=requestAnimationFrame(f);
 }
 function startGPS(){
-  stopGuide();if(!RT.res)return;$('guide').hidden=false;document.body.classList.add('guiding');if(window.SHEET_READY)SHEET.set('peek');$('gMain').textContent='Recherche du GPS…';$('gSub').textContent='';
+  stopGuide();if(!RT.res)return;
+  if(!online()||!navigator.geolocation){startDemo();return}
+  guideSim=false;chipText('');$('guide').hidden=false;document.body.classList.add('guiding');if(window.SHEET_READY)SHEET.set('peek');
+  $('gTurn').textContent=RT.mode==='walk'?'🚶':'🚗';$('gMain').textContent='Recherche du GPS…';$('gSub').textContent=RT.mode==='walk'?'Guidage à pied':'Guidage en voiture';
+  map.setView(RT.res.line[0],17);guideUpdate(0,routeAt(0));$('gMain').textContent='Recherche du GPS…';
   watchId=navigator.geolocation.watchPosition(p=>{
     const ll=L.latLng(p.coords.latitude,p.coords.longitude);
+    if(!inKaloum(ll)){stopGuide();startDemo();chipText('Tu n\'es pas à Kaloum : voici une simulation du trajet. Sur place, le guidage suit ton GPS.');return}
     /* où en est-on sur le trajet ? */
     const r=RT.res;let best=Infinity,bd=0;
     for(let i=1;i<r.line.length;i++){const A=r.line[i-1],B=r.line[i],ax=A[1]*mLon,ay=A[0]*mLat,vx=B[1]*mLon-ax,vy=B[0]*mLat-ay,L2=vx*vx+vy*vy||1;
       const t=Math.max(0,Math.min(1,((ll.lng*mLon-ax)*vx+(ll.lat*mLat-ay)*vy)/L2)),dd=Math.hypot(ll.lng*mLon-ax-t*vx,ll.lat*mLat-ay-t*vy);if(dd<best){best=dd;bd=r.cum[i-1]+t*Math.sqrt(L2)}}
-    if(best>45){RT.from=ll;RT.fromTxt='Ma position';computeRoute();$('guide').hidden=false;$('gSub').textContent='Nouveau trajet calculé';return}
+    if(best>45){RT.from=ll;RT.fromTxt='Ma position';computeRoute();
+      if(!RT.res){stopGuide();chipText('Aucun chemin depuis ta position : rapproche-toi d\'une rue ou choisis le départ sur la carte.');return}
+      $('guide').hidden=false;$('gSub').textContent='Nouveau trajet calculé depuis ta position';return}
     follow(ll);guideUpdate(bd,ll);
   },()=>{$('gMain').textContent='GPS indisponible';$('gSub').textContent='Autorise la position dans le navigateur.'},{enableHighAccuracy:true,maximumAge:2000});
 }
@@ -1056,7 +1084,7 @@ function stopGuide(keepBanner){
   if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null}
   if(!keepBanner){$('guide').hidden=true;document.body.classList.remove('guiding');if(guideMarker){rtLayer.removeLayer(guideMarker);guideMarker=null}}
 }
-$('gStop').onclick=()=>stopGuide();
+$('gStop').onclick=()=>{stopGuide();if(window.SHEET_READY&&RT.to){SHEET.set('half');$('sheet').scrollTop=0}};
 
 /* ---------- chercher une adresse : « 27 Rue Camara Laye » ---------- */
 const norm=t=>String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
@@ -1612,7 +1640,7 @@ function select(key,fly){
   selected=key;const s=streets.find(x=>x.key===key);if(!s)return;
   draw();list();detail(s);
   if(window.SHEET_READY&&NARROW()){document.body.classList.remove('has-route');SHEET.title(s.mode==='todo'?'Rue à nommer':label(s),'Fiche de la rue');if(SHEET.state==='peek')SHEET.set('half');$('sheet').scrollTop=0}
-  if(fly){const pl=lines.get(key);if(pl)map.fitBounds(pl.getBounds(),{maxZoom:17,padding:[40,40]})}
+  if(fly){const pl=lines.get(key);if(pl)map.fitBounds(pl.getBounds(),Object.assign({maxZoom:17},fitPad(40)))}
 }
 function detail(s){
   const p=s.pid?byId[s.pid]:null;
