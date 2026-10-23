@@ -161,10 +161,32 @@ li.letter{font:800 18px var(--display);color:var(--plan-quartier);padding:10px 8
 .qlist li button{border:0;background:none;color:var(--muted);cursor:pointer;font-size:12px;text-decoration:underline;padding:4px}
 .qdrag .qtr{cursor:grab;outline:2px dashed var(--plan-quartier);outline-offset:3px;border-radius:4px}
 .note{font-size:12px;color:var(--muted);padding:10px 16px;border-top:1px solid var(--line)}
+.tools{display:contents}
+.toolsbtn{display:none}
+.rendu .rfold{display:none}
 @media (max-width:820px){
-  main{grid-template-columns:1fr;grid-template-rows:55% 45%}
-  aside{border-left:0;border-top:1px solid var(--line)}
-  .counts{margin-left:0;width:100%}
+  /* Sur téléphone : la page défile, la carte occupe presque tout l'écran, le panneau passe dessous */
+  html,body{height:auto}
+  body{display:block;overflow:auto}
+  header{gap:8px;padding-block:8px;position:relative}
+  h1{font-size:19px}
+  h1 small{display:none}
+  .counts{margin-left:0;width:100%;gap:12px;font-size:12px}
+  .counts b{font-size:15px}
+  .find{flex:1 1 100%;max-width:none}
+  .toolsbtn{display:inline-flex;align-items:center}
+  .toolsbtn[aria-expanded="true"]{border-color:var(--green);color:var(--green)}
+  .tools{display:none;width:100%;flex-wrap:wrap;gap:8px}
+  .tools.open{display:flex}
+  main{display:block}
+  .mapwrap{height:76vh;height:76svh;min-height:380px;display:flex}
+  aside{border-left:0;border-top:1px solid var(--line);min-height:0}
+  #list{overflow:visible;flex:none}
+  .rendu{padding:6px 8px}
+  .rendu .rfold{display:inline;font-size:11px;color:var(--muted);margin-left:4px}
+  .rendu b{cursor:pointer;display:flex;align-items:center;min-height:28px}
+  .rendu.fold label{display:none}
+  .leaflet-control-layers-expanded{padding:4px 8px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -179,11 +201,14 @@ li.letter{font:800 18px var(--display);color:var(--plan-quartier);padding:10px 8
     <span><b id="cTodo">–</b>à nommer</span>
   </div>
   <form class="find" id="findForm" role="search"><input type="search" id="findIn" placeholder="Où allez-vous ? Ex. : 27 Rue Camara Laye" aria-label="Chercher une adresse"><button class="btn primary" type="submit">Chercher</button><button class="btn" type="button" id="whereBtn" title="Utilise le GPS de ton téléphone">Où suis-je ?</button></form>
+  <button class="btn toolsbtn" id="toolsBtn" type="button" aria-expanded="false" aria-controls="tools">Outils du plan</button>
+  <div class="tools" id="tools">
   <span class="fz" id="frozenChip">Plan non figé</span>
   <button class="btn" id="freezeBtn" type="button">Figer le plan</button>
   <button class="btn primary" id="exportBtn" type="button">Exporter (GeoJSON)</button>
   <button class="btn" id="exportCsvBtn" type="button">Adresses simulées (CSV)</button>
   <button class="btn" id="refreshOsmBtn" type="button" title="Récupère les rues, bâtiments et quartiers à jour sur OpenStreetMap, avec copie de secours">Actualiser les rues</button>
+  </div>
 </header>
 <main>
   <div class="mapwrap">
@@ -371,6 +396,8 @@ const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>
 const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
 /* ---------- carte ---------- */
+(()=>{const b=document.getElementById('toolsBtn'),t=document.getElementById('tools');
+  b.addEventListener('click',()=>{const o=!t.classList.contains('open');t.classList.toggle('open',o);b.setAttribute('aria-expanded',o?'true':'false')})})();
 const map=L.map('map',{zoomControl:true,zoomSnap:0.5}).setView([9.512,-13.712],15);
 for(const[n,z]of[['bati',360],['casing',380],['voies',400],['noms',430]]){map.createPane(n);map.getPane(n).style.zIndex=z}
 map.getPane('noms').style.pointerEvents='none';
@@ -384,7 +411,7 @@ const bases={
 let baseName='Plan',renderMode='plan',gridShown=true,circShown=false,limShown=true,tramShown=false;try{tramShown=localStorage.getItem(STORE+'-tram-on')==='1'}catch(e){}try{limShown=localStorage.getItem(STORE+'-lim')!=='0'}catch(e){}try{circShown=localStorage.getItem(STORE+'-circ')==='1'}catch(e){}try{gridShown=localStorage.getItem(STORE+'-grille')!=='0'}catch(e){}
 try{const b=localStorage.getItem(STORE+'-fond2');if(b&&bases[b])baseName=b;const r=localStorage.getItem(STORE+'-rendu');if(r==='plan'||r==='suivi')renderMode=r}catch(e){}
 bases[baseName].addTo(map);
-L.control.layers(bases,null,{position:'topright',collapsed:false}).addTo(map);
+L.control.layers(bases,null,{position:'topright',collapsed:window.matchMedia('(max-width:820px)').matches}).addTo(map);
 const layer=L.layerGroup().addTo(map);
 const extraLayer=L.layerGroup();
 let boundary=null;
@@ -396,9 +423,15 @@ map.on('baselayerchange',e=>{baseName=e.name;try{localStorage.setItem(STORE+'-fo
 /* choix du rendu : plan de ville (style plan de Paris) ou couleurs de suivi des noms */
 const Rendu=L.Control.extend({options:{position:'topright'},onAdd(){
   const d=L.DomUtil.create('div','rendu');
-  d.innerHTML='<b>Rendu</b><label><input type="radio" name="rendu" value="plan"> Plan de ville</label><label><input type="radio" name="rendu" value="suivi"> Suivi des noms</label><label><input type="checkbox" id="gridOn"> Quadrillage</label><label><input type="checkbox" id="circOn"> Circulation</label><label><input type="checkbox" id="limOn"> Limites des quartiers</label><label><input type="checkbox" id="tramOn"> Projet de tramway</label>';
+  d.innerHTML='<b role="button" tabindex="0" aria-expanded="true">Rendu<span class="rfold">▾</span></b><label><input type="radio" name="rendu" value="plan"> Plan de ville</label><label><input type="radio" name="rendu" value="suivi"> Suivi des noms</label><label><input type="checkbox" id="gridOn"> Quadrillage</label><label><input type="checkbox" id="circOn"> Circulation</label><label><input type="checkbox" id="limOn"> Limites des quartiers</label><label><input type="checkbox" id="tramOn"> Projet de tramway</label>';
   d.querySelector(`input[value="${renderMode}"]`).checked=true;
   L.DomEvent.disableClickPropagation(d);
+  /* Sur téléphone, le panneau est replié pour laisser la place à la carte : toucher « Rendu » l'ouvre */
+  const rb=d.querySelector('b'),narrow=window.matchMedia('(max-width:820px)').matches;
+  const fold=f=>{d.classList.toggle('fold',f);rb.setAttribute('aria-expanded',f?'false':'true');rb.querySelector('.rfold').textContent=f?'▸':'▾'};
+  fold(narrow);
+  rb.addEventListener('click',()=>fold(!d.classList.contains('fold')));
+  rb.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fold(!d.classList.contains('fold'))}});
   d.querySelector('#gridOn').checked=gridShown;d.querySelector('#limOn').checked=limShown;d.querySelector('#tramOn').checked=tramShown;d.querySelector('#circOn').checked=circShown;
   d.addEventListener('change',e=>{
     if(e.target.id==='tramOn'){tramShown=e.target.checked;try{localStorage.setItem(STORE+'-tram-on',tramShown?'1':'0')}catch(_){}showTram(true);return}
@@ -1503,7 +1536,7 @@ function index(q){
   $('list').innerHTML=html||'<li class="empty" style="padding:8px">Aucune rue trouvée.</li>';
 }
 for(const[id,v]of[['tabList','list'],['tabIdx','idx']])$(id).addEventListener('click',()=>{view=v;$('tabList').classList.toggle('on',v==='list');$('tabIdx').classList.toggle('on',v==='idx');list()});
-$('list').addEventListener('click',e=>{const b=e.target.closest('button[data-k]');if(b)select(b.dataset.k,true)});
+$('list').addEventListener('click',e=>{const b=e.target.closest('button[data-k]');if(b){select(b.dataset.k,true);if(window.matchMedia('(max-width:820px)').matches)document.querySelector('.mapwrap').scrollIntoView({behavior:'smooth',block:'start'})}});
 $('q').addEventListener('input',list);
 $('renameAll').checked=!!saved.renameAll;
 $('renameAll').addEventListener('change',e=>{saved.renameAll=e.target.checked;persist();assign()});
