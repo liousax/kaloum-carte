@@ -163,53 +163,78 @@ li.letter{font:800 18px var(--display);color:var(--plan-quartier);padding:10px 8
 .note{font-size:12px;color:var(--muted);padding:10px 16px;border-top:1px solid var(--line)}
 .tools{display:contents}
 .streetsbtn{display:none}
+.sheethandle,.fabs{display:none}
 .rdet summary{cursor:pointer;font-weight:600;font-size:13px;color:var(--muted);padding:6px 0;min-height:32px}
 .rdet[open] summary{color:var(--fg)}
 .toolsbtn{display:none}
 .rendu .rfold{display:none}
 @media (max-width:820px){
-  /* Sur téléphone : la page défile, la carte occupe presque tout l'écran, le panneau passe dessous */
-  html,body{height:auto}
-  body{display:block;overflow:auto}
-  header{gap:8px;padding-block:8px;position:relative}
-  h1{font-size:19px}
-  h1 small{display:none}
-  .counts{margin-left:0;width:100%;gap:12px;font-size:12px}
-  .counts b{font-size:15px}
-  .find{flex:1 1 100%;max-width:none}
-  .toolsbtn{display:inline-flex;align-items:center}
-  .toolsbtn[aria-expanded="true"]{border-color:var(--green);color:var(--green)}
-  .tools{display:none;width:100%;flex-wrap:wrap;gap:8px}
+  /* ===== Téléphone : comme une appli de cartes =====
+     carte plein écran, barre de recherche flottante, boutons ronds, fiche coulissante en bas */
+  :root{--sv:132px}
+  html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+  body{display:block}
+  .flag{display:none}
+  header{position:fixed;z-index:1250;top:calc(env(safe-area-inset-top,0px) + 10px);left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));background:transparent;border:0;padding:0;display:flex;flex-wrap:nowrap;align-items:center;gap:8px;pointer-events:none}
+  header>*{pointer-events:auto}
+  header h1,header .counts{display:none}
+  .find{flex:1 1 auto;max-width:none;min-width:0;display:flex;align-items:center;gap:4px;background:var(--panel);border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.28);padding:4px 4px 4px 16px;height:52px}
+  .find input{border:0;background:transparent;min-height:44px;font-size:16px;padding:0;outline-offset:-2px}
+  .find .btn{border-radius:999px;min-height:44px;padding:0 14px}
+  #whereBtn{display:none}
+  .toolsbtn{display:grid;place-items:center;width:52px;height:52px;padding:0;border-radius:50%;background:var(--panel);box-shadow:0 2px 10px rgba(0,0,0,.28);border:0;font-size:0;flex:none}
+  .toolsbtn::before{content:"⋮";font:700 24px/1 var(--body);color:var(--fg)}
+  .tools{display:none;position:absolute;top:60px;right:0;width:min(300px,calc(100vw - 20px));flex-direction:column;align-items:stretch;gap:8px;background:var(--panel);border-radius:16px;padding:12px;box-shadow:0 8px 28px rgba(0,0,0,.35)}
   .tools.open{display:flex}
+  .tools .btn{min-height:44px;text-align:left}
   main{display:block}
-  .mapwrap{height:76vh;height:76svh;min-height:380px;display:flex}
-  aside{border-left:0;border-top:1px solid var(--line);min-height:0}
-  #list{overflow:visible;flex:none}
-  .rendu{padding:6px 8px}
+  .mapwrap{position:fixed;inset:0;height:auto;min-height:0;display:flex}
+  .leaflet-control-zoom{display:none}
+  .leaflet-top{top:calc(env(safe-area-inset-top,0px) + 70px)}
+  .leaflet-bottom{bottom:calc(var(--sv) + 4px);transition:bottom .25s}
+  .leaflet-control-attribution{font-size:9px}
+  .leaflet-control-layers-toggle{width:44px;height:44px;border-radius:50%}
+  .leaflet-control-layers{border-radius:14px!important;box-shadow:0 2px 10px rgba(0,0,0,.28)!important;border:0!important}
+  .rendu{padding:6px 10px;border-radius:14px}
   .rendu .rfold{display:inline;font-size:11px;color:var(--muted);margin-left:4px}
-  .rendu b{cursor:pointer;display:flex;align-items:center;min-height:28px}
+  .rendu b{cursor:pointer;display:flex;align-items:center;min-height:30px}
   .rendu.fold label{display:none}
-  /* Liste des rues : menu déroulant */
-  .streetsbtn{display:flex;align-items:center;gap:8px;width:calc(100% - 32px);margin:12px 16px;min-height:48px;font-size:15px;justify-content:flex-start}
+  .guide{top:calc(env(safe-area-inset-top,0px) + 10px);width:calc(100% - 20px)}
+  body.guiding header{display:none}
+  .pickhint{top:calc(env(safe-area-inset-top,0px) + 72px);width:calc(100% - 20px);justify-content:space-between}
+  .status{z-index:1100}
+  /* boutons ronds flottants (position, itinéraire) */
+  .fabs{position:fixed;right:max(12px,env(safe-area-inset-right,0px));bottom:calc(var(--sv) + 14px);z-index:1150;display:flex;flex-direction:column;gap:12px;transition:bottom .25s}
+  .fab{display:grid;place-items:center;width:52px;height:52px;border-radius:50%;border:0;background:var(--panel);color:var(--fg);box-shadow:0 2px 10px rgba(0,0,0,.3);cursor:pointer}
+  .fab.go{background:var(--street-keep);color:var(--plan-halo)}
+  .fab:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+  body.sheet-full .fabs{opacity:0;pointer-events:none}
+  /* fiche du bas, à trois hauteurs : réduite, moitié, plein écran */
+  aside{position:fixed;left:0;right:0;bottom:0;z-index:1200;height:calc(100svh - env(safe-area-inset-top,0px) - 70px);border:0;border-radius:18px 18px 0 0;box-shadow:0 -4px 24px rgba(0,0,0,.3);transform:translateY(calc(100% - var(--sv)));transition:transform .25s ease;overflow-y:auto;overscroll-behavior:contain;padding-bottom:env(safe-area-inset-bottom,0px);display:block;touch-action:pan-y}
+  aside.dragging{transition:none}
+  .sheethandle{display:block;position:sticky;top:0;z-index:2;background:var(--panel);padding:8px 16px 10px;cursor:grab;touch-action:none;border-radius:18px 18px 0 0}
+  .sheethandle .grip{display:block;width:42px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 10px}
+  .sheettitle{font:800 18px/1.2 var(--display)}
+  .sheetsub{font-size:13px;color:var(--muted);margin-top:2px}
+  .streetsbtn{display:flex;align-items:center;gap:8px;width:calc(100% - 32px);margin:4px 16px 12px;min-height:48px;font-size:15px;justify-content:flex-start;border-radius:12px}
   .streetsbtn .sc{color:var(--muted);font-weight:500;font-size:13px}
   .streetsbtn .chev{margin-left:auto;font-size:14px}
   aside:not(.lists-open) .listhead, aside:not(.lists-open) #list, aside:not(.lists-open) .legend,
   aside:not(.lists-open) .addp, aside:not(.lists-open) .refbar{display:none}
   aside.lists-open .streetsbtn{border-color:var(--green);color:var(--green)}
-  #list{max-height:60vh;max-height:60svh;overflow:auto}
-  /* Itinéraire : fiche fixée en bas de l'écran, boutons toujours visibles */
-  .route{position:fixed;left:0;right:0;bottom:0;z-index:1200;max-height:58vh;max-height:58svh;overflow:auto;border-radius:16px 16px 0 0;border-top:1px solid var(--line);box-shadow:0 -6px 24px rgba(0,0,0,.25);background:var(--panel);padding:12px max(16px,env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
-  .route h2{font-size:17px;margin:0 0 6px}
+  #list{overflow:visible;flex:none}
+  .route{position:static;border-radius:0;box-shadow:none;padding:4px 16px 14px;background:transparent;border-bottom:1px solid var(--line)}
+  .route h2{font-size:18px;margin:0 0 6px}
   .route .rpts{font-size:13px;margin-bottom:4px}
   .route .rmode .btn{flex:1;min-height:44px;font-size:14px}
   .route .row .btn{min-height:44px}
   .route .row .btn.primary{flex:1 1 100%}
-  .route .rsum{margin:4px 0}
-  .route .rsum b{font-size:21px}
-  body.routing{padding-bottom:58vh;padding-bottom:58svh}
-  body.guiding .route{display:none}
-  body.guiding{padding-bottom:0}
-  .leaflet-control-layers-expanded{padding:4px 8px}
+  .route .rsum b{font-size:22px}
+  .detail{padding:4px 16px 14px}
+  body.has-route .detail{display:none}
+  .route .eyebrow,.route>h2{display:none}
+  .detail:has(> p.empty:only-child){display:none}
+  .note{padding-bottom:24px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -238,9 +263,14 @@ li.letter{font:800 18px var(--display);color:var(--plan-quartier);padding:10px 8
     <div id="map" aria-label="Carte de Kaloum"></div>
     <div class="guide" id="guide" hidden><div class="gturn" id="gTurn">↑</div><div class="gtxt"><b id="gMain"></b><span id="gSub"></span></div><button class="btn" type="button" id="gStop">Arrêter</button></div>
     <div class="pickhint" id="pickHint" hidden><span id="pickTxt">Clique sur la carte pour choisir le point de départ</span> <button class="btn" type="button" id="pickCancel">Annuler</button></div>
+    <div class="fabs" id="fabs">
+      <button type="button" class="fab" id="fabLocate" aria-label="Ma position"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+      <button type="button" class="fab go" id="fabRoute" aria-label="Itinéraire"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.7 11.3l-9-9a1 1 0 0 0-1.4 0l-9 9a1 1 0 0 0 0 1.4l9 9a1 1 0 0 0 1.4 0l9-9a1 1 0 0 0 0-1.4zM14 14.5V12h-4v3H8v-4a1 1 0 0 1 1-1h5V7.5l3.5 3.5-3.5 3.5z"/></svg></button>
+    </div>
     <div class="status" id="status"><div><h3>Chargement des rues de Kaloum…</h3><p class="empty">Les rues réelles sont récupérées depuis OpenStreetMap. Cela prend 5 à 30 secondes.</p></div></div>
   </div>
-  <aside>
+  <aside id="sheet">
+    <div class="sheethandle" id="sheetHandle" role="button" tabindex="0" aria-label="Agrandir ou réduire le panneau"><span class="grip"></span><div class="sheettitle" id="sheetTitle">Rues de Kaloum</div><div class="sheetsub" id="sheetSub">Touche une rue ou une adresse sur la carte</div></div>
     <section class="route" id="route" hidden aria-live="polite"></section>
     <section class="detail" id="detail"><p class="empty">Clique sur une rue de la carte ou de la liste pour voir son nom, la personnalité qu'il honore, et le changer.</p></section>
     <button type="button" class="btn streetsbtn" id="streetsBtn" aria-expanded="false" aria-controls="list"><span>Liste des rues et index A–Z</span><span id="streetsCount" class="sc"></span><span class="chev" aria-hidden="true">▾</span></button>
@@ -422,7 +452,7 @@ const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim
 /* ---------- carte ---------- */
 const NARROW=()=>window.matchMedia('(max-width:820px)').matches;
 (()=>{const b=document.getElementById('streetsBtn'),a=document.querySelector('aside');
-  b.addEventListener('click',()=>{const o=!a.classList.contains('lists-open');a.classList.toggle('lists-open',o);b.setAttribute('aria-expanded',o?'true':'false');b.querySelector('.chev').textContent=o?'▴':'▾'})})();
+  b.addEventListener('click',()=>{const o=!a.classList.contains('lists-open');a.classList.toggle('lists-open',o);if(o&&window.SHEET_READY)SHEET.set('full');b.setAttribute('aria-expanded',o?'true':'false');b.querySelector('.chev').textContent=o?'▴':'▾'})})();
 (()=>{const b=document.getElementById('toolsBtn'),t=document.getElementById('tools');
   b.addEventListener('click',()=>{const o=!t.classList.contains('open');t.classList.toggle('open',o);b.setAttribute('aria-expanded',o?'true':'false')})})();
 const map=L.map('map',{zoomControl:true,zoomSnap:0.5}).setView([9.512,-13.712],15);
@@ -435,7 +465,7 @@ const bases={
   'Plan':L.tileLayer(ESRI+'Canvas/'+(dark()?'World_Dark_Gray_Base':'World_Light_Gray_Base')+'/MapServer/tile/{z}/{y}/{x}',{maxZoom:20,maxNativeZoom:16,attribution:'Fond &copy; Esri'}),
   'Satellite':L.tileLayer(ESRI+'World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:20,maxNativeZoom:18,attribution:'Images &copy; Esri, Maxar'})
 };
-let baseName='Plan',renderMode='plan',gridShown=true,circShown=false,limShown=true,tramShown=false;try{tramShown=localStorage.getItem(STORE+'-tram-on')==='1'}catch(e){}try{limShown=localStorage.getItem(STORE+'-lim')!=='0'}catch(e){}try{circShown=localStorage.getItem(STORE+'-circ')==='1'}catch(e){}try{gridShown=localStorage.getItem(STORE+'-grille')!=='0'}catch(e){}
+let baseName='Plan',renderMode='plan',gridShown=true,circShown=false,limShown=true,tramShown=false;try{tramShown=localStorage.getItem(STORE+'-tram-on')==='1'}catch(e){}try{limShown=localStorage.getItem(STORE+'-lim')!=='0'}catch(e){}try{circShown=localStorage.getItem(STORE+'-circ')==='1'}catch(e){}try{const g=localStorage.getItem(STORE+'-grille');gridShown=g===null?!window.matchMedia('(max-width:820px)').matches:g!=='0'}catch(e){}
 try{const b=localStorage.getItem(STORE+'-fond2');if(b&&bases[b])baseName=b;const r=localStorage.getItem(STORE+'-rendu');if(r==='plan'||r==='suivi')renderMode=r}catch(e){}
 bases[baseName].addTo(map);
 L.control.layers(bases,null,{position:'topright',collapsed:window.matchMedia('(max-width:820px)').matches}).addTo(map);
@@ -515,6 +545,7 @@ async function load(){
       makeGrid();streets.forEach(s=>{s.cells=cellsOf(s);s.cps=cpsOf(s)});
       setQuartiers();
       map.fitBounds(L.latLngBounds(streets.flatMap(s=>s.segs.flat()).map(p=>[p.lat,p.lon])),{padding:[20,20]});
+      if(window.matchMedia('(max-width:820px)').matches)map.setView(map.getCenter(),16);
       assign();hideStatus();loadExtra();openHash();
       if(tramShown)showTram(false);
       return;
@@ -945,8 +976,9 @@ function computeRoute(){
 }
 function renderRoute(){
   const box=$('route');
-  if(!RT.to){box.hidden=true;document.body.classList.remove('routing');return}
-  box.hidden=false;document.body.classList.add('routing');
+  if(!RT.to){box.hidden=true;document.body.classList.remove('has-route');if(window.SHEET_READY){SHEET.title('Rues de Kaloum','Touche une rue ou une adresse sur la carte');SHEET.set('peek')}return}
+  box.hidden=false;document.body.classList.add('has-route');
+  if(window.SHEET_READY){SHEET.title('Itinéraire',RT.toTxt);if(SHEET.state==='peek')SHEET.set('half');$('sheet').scrollTop=0}
   const r=RT.res;
   box.innerHTML=`<div class="eyebrow">Itinéraire</div><h2>${esc(RT.toTxt)}</h2>
     <div class="rpts"><i class="from"></i><span>${RT.from?`<b>${esc(RT.fromTxt)}</b>`:'<b>Départ ?</b>'} · <a id="rMe">ma position</a> · <a id="rPick">choisir sur la carte</a></span>
@@ -1000,7 +1032,7 @@ function guideUpdate(d,ll){
   document.querySelectorAll('#rSteps li').forEach(li=>li.classList.toggle('cur',+li.dataset.i===k));
 }
 function startDemo(){
-  stopGuide();const r=RT.res;if(!r)return;$('guide').hidden=false;document.body.classList.add('guiding');
+  stopGuide();const r=RT.res;if(!r)return;$('guide').hidden=false;document.body.classList.add('guiding');if(window.SHEET_READY)SHEET.set('peek');
   let d=0;const speed=RT.mode==='walk'?30:60;let last=performance.now();
   map.setView(r.line[0],17);
   const f=now=>{const dt=Math.min(.1,(now-last)/1000);last=now;d+=speed*dt;const ll=routeAt(Math.min(d,r.len));guideUpdate(d,ll);
@@ -1008,7 +1040,7 @@ function startDemo(){
   guideTimer=requestAnimationFrame(f);
 }
 function startGPS(){
-  stopGuide();if(!RT.res)return;$('guide').hidden=false;document.body.classList.add('guiding');$('gMain').textContent='Recherche du GPS…';$('gSub').textContent='';
+  stopGuide();if(!RT.res)return;$('guide').hidden=false;document.body.classList.add('guiding');if(window.SHEET_READY)SHEET.set('peek');$('gMain').textContent='Recherche du GPS…';$('gSub').textContent='';
   watchId=navigator.geolocation.watchPosition(p=>{
     const ll=L.latLng(p.coords.latitude,p.coords.longitude);
     /* où en est-on sur le trajet ? */
@@ -1564,7 +1596,7 @@ function index(q){
   $('list').innerHTML=html||'<li class="empty" style="padding:8px">Aucune rue trouvée.</li>';
 }
 for(const[id,v]of[['tabList','list'],['tabIdx','idx']])$(id).addEventListener('click',()=>{view=v;$('tabList').classList.toggle('on',v==='list');$('tabIdx').classList.toggle('on',v==='idx');list()});
-$('list').addEventListener('click',e=>{const b=e.target.closest('button[data-k]');if(b){select(b.dataset.k,true);if(window.matchMedia('(max-width:820px)').matches)document.querySelector('.mapwrap').scrollIntoView({behavior:'smooth',block:'start'})}});
+$('list').addEventListener('click',e=>{const b=e.target.closest('button[data-k]');if(b){select(b.dataset.k,true);if(window.SHEET_READY&&NARROW())SHEET.set('half')}});
 $('q').addEventListener('input',list);
 $('renameAll').checked=!!saved.renameAll;
 $('renameAll').addEventListener('change',e=>{saved.renameAll=e.target.checked;persist();assign()});
@@ -1579,6 +1611,7 @@ function counts(){
 function select(key,fly){
   selected=key;const s=streets.find(x=>x.key===key);if(!s)return;
   draw();list();detail(s);
+  if(window.SHEET_READY&&NARROW()){document.body.classList.remove('has-route');SHEET.title(s.mode==='todo'?'Rue à nommer':label(s),'Fiche de la rue');if(SHEET.state==='peek')SHEET.set('half');$('sheet').scrollTop=0}
   if(fly){const pl=lines.get(key);if(pl)map.fitBounds(pl.getBounds(),{maxZoom:17,padding:[40,40]})}
 }
 function detail(s){
@@ -1748,6 +1781,43 @@ $('npAdd').onclick=()=>{
   ['npName','npDates','npBio'].forEach(i=>$(i).value='');
   $('npMsg').textContent=name+' ajouté(e). Une rue sans nom lui est attribuée.';
   assign();
+};
+
+/* ---------- Téléphone : fiche coulissante du bas (comme une appli de cartes) ---------- */
+const SHEET=(()=>{
+  const a=$('sheet'),h=$('sheetHandle'),root=document.documentElement;let state='peek';
+  const H=()=>a.offsetHeight;
+  const px=st=>st==='full'?H():st==='half'?Math.round(innerHeight*0.5):Math.min(H(),h.offsetHeight+60);
+  function apply(v,anim){
+    if(!NARROW()){a.style.transform='';root.style.removeProperty('--sv');return}
+    a.classList.toggle('dragging',!anim);
+    a.style.transform=`translateY(${Math.max(0,H()-v)}px)`;
+    root.style.setProperty('--sv',Math.min(v,Math.round(innerHeight*0.5))+'px');
+  }
+  function set(st){
+    state=st;apply(px(st),true);
+    document.body.classList.toggle('sheet-full',st==='full');
+    a.style.overflowY=st==='peek'?'hidden':'auto';if(st==='peek')a.scrollTop=0;
+    h.setAttribute('aria-expanded',st==='peek'?'false':'true');
+  }
+  let y0=null,v0=0,moved=0;
+  h.addEventListener('pointerdown',e=>{if(!NARROW())return;y0=e.clientY;v0=px(state);moved=0;h.setPointerCapture(e.pointerId)});
+  h.addEventListener('pointermove',e=>{if(y0===null)return;const dy=y0-e.clientY;moved=Math.max(moved,Math.abs(dy));if(moved>6)apply(Math.max(px('peek'),Math.min(H(),v0+dy)),false)});
+  h.addEventListener('pointerup',e=>{
+    if(y0===null)return;const dy=y0-e.clientY;y0=null;a.classList.remove('dragging');
+    if(moved<=6){set(state==='peek'?'half':state==='half'?'full':'peek');return}
+    const v=v0+dy,c=['peek','half','full'].map(k=>[k,Math.abs(px(k)-v)]).sort((x,y)=>x[1]-y[1])[0][0];set(c);
+  });
+  h.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();set(state==='peek'?'half':state==='half'?'full':'peek')}});
+  window.addEventListener('resize',()=>set(state));
+  const title=(t,sub)=>{$('sheetTitle').textContent=t;$('sheetSub').textContent=sub||''};
+  return{set,title,get state(){return state}};
+})();
+SHEET.set('peek');window.SHEET_READY=true;
+$('fabLocate').onclick=()=>$('whereBtn').click();
+$('fabRoute').onclick=()=>{
+  if(RT.to){SHEET.set('half');return}
+  $('findIn').focus();chipText('Cherche une adresse, ou touche la carte puis « Y aller ».');
 };
 load();
 })();
