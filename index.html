@@ -475,7 +475,11 @@ const NARROW=()=>window.matchMedia('(max-width:820px)').matches;
 const map=L.map('map',{zoomControl:true,zoomSnap:0.5,rotate:true,touchRotate:true,shiftKeyRotate:true,rotateControl:false,compassBearing:false,bearing:0}).setView([9.512,-13.712],15);
 const mapBearing=()=>map.getBearing?map.getBearing():0;
 map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
-for(const[n,z]of[['bati',360],['casing',380],['voies',400],['noms',430]]){map.createPane(n);map.getPane(n).style.zIndex=z}
+/* Avec la rotation, chaque calque doit être rangé au bon endroit :
+   les dessins (rues, bâtiments, noms, trajet…) tournent avec la carte, les marqueurs restent droits. */
+const ROT_PARENT=()=>map.getPane('rotatePane')||undefined, NOROT_PARENT=()=>map.getPane('norotatePane')||undefined;
+function mkPane(n,z,turns,noEvents){map.createPane(n,turns?ROT_PARENT():NOROT_PARENT());const p=map.getPane(n);p.style.zIndex=z;if(noEvents)p.style.pointerEvents='none';return p}
+for(const[n,z]of[['bati',360],['casing',380],['voies',400],['noms',430]])mkPane(n,z,true)
 map.getPane('noms').style.pointerEvents='none';
 const rBati=L.canvas({pane:'bati'}),rCasing=L.svg({pane:'casing'}),rVoies=L.svg({pane:'voies'}),rNoms=L.svg({pane:'noms',padding:0.6});
 const dark=()=>matchMedia('(prefers-color-scheme: dark)').matches&&document.documentElement.dataset.theme!=='light'||document.documentElement.dataset.theme==='dark';
@@ -524,7 +528,9 @@ const Boussole=L.Control.extend({options:{position:'topright'},onAdd(){
   b.addEventListener('click',()=>{if(map.setBearing)map.setBearing(0)});
   const up=()=>{const v=mapBearing();b.hidden=Math.abs(((v%360)+360)%360)<1;b.querySelector('svg').style.transform='rotate('+v+'deg)'};
   map.on('rotate',up);up();return b}});
-if(map.setBearing)new Boussole().addTo(map);
+if(map.setBearing){new Boussole().addTo(map);
+  /* après une rotation : on redessine pour que les noms restent dans le bon sens de lecture */
+  let rotT=null;map.on('rotate',()=>{clearTimeout(rotT);rotT=setTimeout(()=>{if(streets.length)draw()},250)})}
 const Chip=L.Control.extend({options:{position:'bottomleft'},onAdd(){const d=L.DomUtil.create('div','chipmap');d.hidden=true;return d}});
 const chip=new Chip().addTo(map);
 const chipText=t=>{const d=chip.getContainer();d.textContent=t||'';d.hidden=!t};
@@ -714,8 +720,12 @@ const baseW=s=>MAJOR[s.highway]?9:s.highway==='tertiary'?7:5.5;
 const zf=()=>Math.min(3,Math.max(.45,Math.pow(2,(map.getZoom()-16)*.8)));
 function orient(g){
   const a=g[0],b=g[g.length-1];
-  const horiz=Math.abs(b.lon-a.lon)>=Math.abs(b.lat-a.lat);
-  const rev=horiz?b.lon<a.lon:b.lat<a.lat;
+  let horiz=Math.abs(b.lon-a.lon)>=Math.abs(b.lat-a.lat);
+  let rev=horiz?b.lon<a.lon:b.lat<a.lat;
+  if(Math.abs(mapBearing()%360)>1){/* carte tournée : sens de lecture d'après l'écran */
+    const A=map.latLngToContainerPoint([a.lat,a.lon]),B=map.latLngToContainerPoint([b.lat,b.lon]);
+    horiz=Math.abs(B.x-A.x)>=Math.abs(B.y-A.y);rev=horiz?B.x<A.x:B.y>A.y;
+  }
   return(rev?[...g].reverse():g).map(p=>[p.lat,p.lon]);
 }
 const SVGNS='http://www.w3.org/2000/svg';let pid=0;
@@ -894,8 +904,8 @@ map.on('click',e=>{if(picking==='quartier'){picking=false;$('pickHint').hidden=t
 const addrText=a=>{const q=quartierAt(a.q.lat,a.q.lon);return`${a.no}, ${a.s.mode==='todo'?'Rue à nommer':label(a.s)}, ${q?q.cp:CP} Kaloum`};
 let picking=false;
 const RT={from:null,fromTxt:'',to:null,toTxt:'',mode:'car',plan:false,res:null};
-map.createPane('trajet');map.getPane('trajet').style.zIndex=440;map.getPane('trajet').style.pointerEvents='none';
-map.createPane('vehicule');map.getPane('vehicule').style.zIndex=660;map.getPane('vehicule').style.pointerEvents='none';
+mkPane('trajet',440,true,true);
+mkPane('vehicule',660,false,true);
 const rTrajet=L.svg({pane:'trajet'});
 const rtLayer=L.layerGroup().addTo(map);
 /* voiture vue du dessus, orange vif, tournée vers l'est (0°) */
@@ -1418,8 +1428,8 @@ const TRAM_INFO={
   kagbelen:'Correspondance avec le train Conakry Express (terminus de Kagbélen). 395 000 habitants en 2025.',
   lambanyi:'386 000 habitants en 2025.',sonfonia:'310 000 habitants en 2025.',tombolia:'373 000 habitants en 2025.'
 };
-map.createPane('tram');map.getPane('tram').style.zIndex=450;map.getPane('tram').style.pointerEvents='none';
-map.createPane('tramst');map.getPane('tramst').style.zIndex=640;
+mkPane('tram',450,true,true);
+mkPane('tramst',640,false,false);
 const rTram=L.svg({pane:'tram'});
 const tramLayer=L.layerGroup();let tramGeom=null,tramBusy=false;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -1570,7 +1580,7 @@ async function loadExtra(){
    Une adresse prend le code du quartier le plus proche. */
 let quartiers=[],qpolys=[],qEditing=false;
 const qLayer=L.layerGroup().addTo(map);
-map.createPane('limites');map.getPane('limites').style.zIndex=420;map.getPane('limites').style.pointerEvents='none';
+mkPane('limites',420,true,true);
 const rLim=L.svg({pane:'limites'}),limLayer=L.layerGroup().addTo(map);
 const inEdges=(edges,pt)=>{let c=false;for(const[a,b]of edges){if((a.lat>pt.lat)!==(b.lat>pt.lat)){const x=a.lon+(pt.lat-a.lat)/(b.lat-a.lat)*(b.lon-a.lon);if(pt.lon<x)c=!c}}return c};
 const usePolys=()=>qpolys.length>=2;
